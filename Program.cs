@@ -188,9 +188,9 @@ namespace MusicBot
 			// Voice channel to send to
 			public string ChannelName { get; set; }
 			// Max number of requests in the queue
-			public int MaxRequests { get; set; }
+			public int MaxRequests { get; set; } = 5
 			// Max files cached
-			public int MaxFiles { get; set; }
+			public int MaxFiles { get; set; } = 15
 
 			public string Token { get; set; }
 
