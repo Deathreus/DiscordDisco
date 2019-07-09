@@ -36,9 +36,9 @@ namespace MusicBot
 		public static void Main(params string[] args)
 		{
 			Config = new Configuration(args);
-			#if DEBUG
+		#if DEBUG
 			Console.Write(Config);
-			#endif
+		#endif
 
 			SetConsoleCtrlHandler(new EventHandler((e) =>
 			{
@@ -61,18 +61,18 @@ namespace MusicBot
 			{
 				ConnectionTimeout = 4000,
 				HandlerTimeout = 15000,
-			#if DEBUG
+		#if DEBUG
 				LogLevel = LogSeverity.Verbose
-			#endif
+		#endif
 			});
 			
 			_commands = new CommandService(new CommandServiceConfig
 			{
 				CaseSensitiveCommands = true,
 				DefaultRunMode = RunMode.Async,
-			#if DEBUG
+		#if DEBUG
 				LogLevel = LogSeverity.Verbose
-			#endif
+		#endif
 			});
 
 			Services = BuildServices();
@@ -220,6 +220,6 @@ namespace MusicBot
 
 		delegate bool EventHandler(int exitType);
 		[DllImport("kernel32.dll")]
-		private static extern bool SetConsoleCtrlHandler(EventHandler handler, bool add);
+		static extern bool SetConsoleCtrlHandler(EventHandler handler, bool add);
 	}
 }

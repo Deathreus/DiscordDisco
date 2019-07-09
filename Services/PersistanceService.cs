@@ -28,7 +28,7 @@ namespace MusicBot.Services
 						{
 							if (!Files.Values.Contains(filePath))
 							{
-								DateTime createdAt = File.GetCreationTime(filePath);
+								var createdAt = File.GetCreationTime(filePath);
 								if ((DateTime.Now - createdAt).Hours >= 4)
 								{
 									await Task.Run(() => File.Delete(filePath));
@@ -41,7 +41,7 @@ namespace MusicBot.Services
 
 						if (!Files.IsEmpty)
 						{
-							foreach (DateTime time in Files.Keys)
+							foreach (var time in Files.Keys)
 							{
 								if ((DateTime.Now - time).Hours >= 4)
 								{
@@ -100,7 +100,7 @@ namespace MusicBot.Services
 		{
 			string filePath = song.FilePath.Remove(song.FilePath.Length-4, 4);
 			string metaArguments = $"-metadata title=\"{song.Name.Trim()}\" -metadata album=downloaded";
-			Process ffmpeg = new Process
+			var ffmpeg = new Process
 			{
 				StartInfo = new ProcessStartInfo
 				{

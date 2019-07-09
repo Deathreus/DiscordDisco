@@ -83,7 +83,7 @@ namespace MusicBot
 		/// <returns>The YouTube Video title and duration</returns>
 		private static async Task<Tuple<string, string>> GetInfo(string url)
 		{
-			TaskCompletionSource<Tuple<string, string>> tcs = new TaskCompletionSource<Tuple<string, string>>();
+			var tcs = new TaskCompletionSource<Tuple<string, string>>();
 
 			new Thread(() => {
 				try
@@ -92,7 +92,7 @@ namespace MusicBot
 					string duration;
 
 					//Get Video info
-					Process youtubedl = Process.Start(new ProcessStartInfo
+					var youtubedl = Process.Start(new ProcessStartInfo
 					{
 						FileName = ".\\bin\\youtube-dl",
 						Arguments = $"-s --get-title --get-duration {url}",
@@ -127,7 +127,7 @@ namespace MusicBot
 				}
 			}).Start();
 
-			Tuple<string, string> result = await tcs.Task;
+			var result = await tcs.Task;
 			if (result == null)
 				throw new Exception("youtube-dl.exe process failed with no exception.");
 
@@ -136,16 +136,16 @@ namespace MusicBot
 
 		private static async Task<Song> DownloadFromYouTube(string url, string file, IUserMessage userMessage)
 		{
-			TaskCompletionSource<Song> tcs = new TaskCompletionSource<Song>();
+			var tcs = new TaskCompletionSource<Song>();
 
 			string original = file.Remove(file.LastIndexOf('.'), 4);
-			original = String.Concat(original, ".ogg");
+			original = string.Concat(original, ".ogg");
 
-			ConcurrentQueue<string> ProgressBucket = new ConcurrentQueue<string>();
+			var ProgressBucket = new ConcurrentQueue<string>();
 
 			new Thread(() => {
 				// Get title and duration
-				Tuple<string, string> info = GetInfo(url).GetAwaiter().GetResult();
+				var info = GetInfo(url).GetAwaiter().GetResult();
 
 				// We've already cached this
 				if (File.Exists(file))
@@ -177,7 +177,7 @@ namespace MusicBot
 				}
 
 				//Download Video
-				Process youtubedl = new Process
+				var youtubedl = new Process
 				{
 					StartInfo = new ProcessStartInfo
 					{
@@ -193,7 +193,7 @@ namespace MusicBot
 
 				youtubedl.OutputDataReceived += async (s, e) =>
 				{
-					if (String.IsNullOrEmpty(e.Data) || youtubedl.HasExited)
+					if (string.IsNullOrEmpty(e.Data) || youtubedl.HasExited)
 					{
 						return;
 					}
@@ -221,7 +221,7 @@ namespace MusicBot
 						return;
 					}
 
-					if ((DateTime.Now - lastTick).Milliseconds >= 800 || perc < 2 || perc > 98)
+					if ((DateTime.Now - lastTick).Milliseconds >= 1000 || perc < 2 || perc > 98)
 					{
 						string status = "Downloading...\n";
 
@@ -263,7 +263,7 @@ namespace MusicBot
 							Timeout = null
 						});
 
-						Thread.Sleep(1200);
+						Thread.Sleep(1000);
 					}
 				}
 
@@ -294,16 +294,16 @@ namespace MusicBot
 
 		private static async Task<Song> DownloadFromSoundCloud(string url, string file, IUserMessage userMessage)
 		{
-			TaskCompletionSource<Song> tcs = new TaskCompletionSource<Song>();
+			var tcs = new TaskCompletionSource<Song>();
 
 			string original = file.Remove(file.Length - 4, 4);
-			original = String.Concat(original, ".ogg");
+			original = string.Concat(original, ".ogg");
 
-			ConcurrentQueue<string> ProgressBucket = new ConcurrentQueue<string>();
+			var ProgressBucket = new ConcurrentQueue<string>();
 
 			new Thread(() => {
 				// Get title and duration
-				Tuple<string, string> info = GetInfo(url).GetAwaiter().GetResult();
+				var info = GetInfo(url).GetAwaiter().GetResult();
 
 				// We've already cached this
 				if (File.Exists(file))
@@ -335,7 +335,7 @@ namespace MusicBot
 				}
 
 				//Download track
-				Process youtubedl = new Process
+				var youtubedl = new Process
 				{
 					StartInfo = new ProcessStartInfo
 					{
@@ -351,7 +351,7 @@ namespace MusicBot
 
 				youtubedl.OutputDataReceived += async (s, e) =>
 				{
-					if (String.IsNullOrEmpty(e.Data) || youtubedl.HasExited)
+					if (string.IsNullOrEmpty(e.Data) || youtubedl.HasExited)
 					{
 						return;
 					}
@@ -379,7 +379,7 @@ namespace MusicBot
 						return;
 					}
 
-					if ((DateTime.Now - lastTick).Milliseconds >= 800 || perc < 2 || perc > 98)
+					if ((DateTime.Now - lastTick).Milliseconds >= 1000 || perc < 2 || perc > 98)
 					{
 						string status = "Downloading...\n";
 
@@ -421,7 +421,7 @@ namespace MusicBot
 							Timeout = null
 						});
 
-						Thread.Sleep(1200);
+						Thread.Sleep(1000);
 					}
 				}
 
@@ -468,7 +468,7 @@ namespace System
 		/// <returns>
 		/// A new <see cref="string"/> instance.
 		/// </returns>
-		public static String Substring(this string src, string start, string end)
+		public static string Substring(this String src, string start, string end)
 		{
 			int Start, End;
 
@@ -507,7 +507,7 @@ namespace System
 		/// <exception cref="ArgumentException">
 		/// <paramref name="options"/> is not one of the System.StringSplitOptions values.
 		/// </exception>
-		public static String[] Split(this string src, string seperator, StringSplitOptions options)
+		public static string[] Split(this String src, string seperator, StringSplitOptions options)
 		{
 			var separr = new string[1] { seperator };
 			return src.Split(separr, options);
