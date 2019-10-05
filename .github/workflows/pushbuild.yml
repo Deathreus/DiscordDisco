@@ -1,0 +1,19 @@
+name: CI
+
+on:
+  push:
+    branches:
+    - release
+
+jobs:
+  build:
+
+    runs-on: windows-latest
+    
+    steps:
+    - uses: actions/checkout@v1
+    - name: Build and test
+      uses: Azure/github-actions/dotnetcore-cli@master
+      with: |
+        dotnet build
+        dotnet test
