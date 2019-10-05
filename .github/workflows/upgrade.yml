@@ -2,7 +2,8 @@ name: Bi-Monthly Upgrade
 
 on:
   schedule:
-    - cron: 0 12 7,21
+    - cron: 0 12 7
+    - cron: 0 12 21
 
 jobs:
   upgrade:
