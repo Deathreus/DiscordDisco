@@ -8,9 +8,18 @@ on:
 jobs:
   build:
 
-    runs-on: windows-latest
+    runs-on: ubuntu-16.04
     
     steps:
     - uses: actions/checkout@v1
     - name: Build and test
       uses: Azure/github-actions/dotnetcore-cli@master
+
+  release:
+    
+    needs: build
+    runs-on: ubuntu-16.04
+    
+    steps:
+      - name: Create Release
+        uses: frankjuniorr/github-create-release-action@v2.1.1
