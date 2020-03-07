@@ -12,7 +12,7 @@ using Discord.Commands;
 
 namespace MusicBot
 {
-	public class Utils
+	public static class Utils
 	{
 		/// <summary>
 		/// Download Song or Video

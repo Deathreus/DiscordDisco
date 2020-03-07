@@ -73,19 +73,15 @@ namespace MusicBot.Services
 		{
 			string temp = Regex.Replace(url.Split(':')[1], "[^\\w]", "");
 			temp = String.Format("DEAD{0:X}", temp.QuickHash());
-			string fileName = Path.Combine(mp3Directory, temp + ".mp3");
+			string fileName = Path.Combine(mp3Directory, temp + ".ogg");
 			
 			if (!Files.Values.Contains(fileName))
 				Files.TryAdd(DateTime.Now, fileName);
 
 			var message = !File.Exists(fileName) ? await context.Channel.SendMessageAsync("Downloading...\n") : null;
 			Song song = await Utils.Download(url, fileName, message);
-			if (song != null)
-			{
-				await PostProcess(song);
-				if(bEnque)
+			if (song != null && bEnque)
 					Program.Queues[context.Guild.Id].Enqueue(song);
-			}
 
 			// In case we get a ton of requests, arbitrarily limit how many we store
 			if (Files.Count > Program.Instance.MaxFiles)
@@ -94,46 +90,9 @@ namespace MusicBot.Services
 			return fileName;
 		}
 
-		// I don't trust youtube-dl downloading smoothly, given the file is half-corrupted sometimes,
-		// playable but metadata can't be read or changed and some audio editors won't open it correctly
-		private Task PostProcess(Song song)
-		{
-			string filePath = song.FilePath.Remove(song.FilePath.Length-4, 4);
-			string metaArguments = $"-metadata title=\"{song.Name.Trim()}\" -metadata album=downloaded";
-			var ffmpeg = new Process
-			{
-				StartInfo = new ProcessStartInfo
-				{
-					FileName = ".\\bin\\ffmpeg",
-					Arguments = $"-hide_banner -y -i \"{filePath}.ogg\" {metaArguments} -b:a 128k \"{filePath}.mp3\"",
-					CreateNoWindow = true,
-					RedirectStandardOutput = true,
-					UseShellExecute = false
-				}
-			};
-
-			try
-			{
-				ffmpeg.Start();
-				while (!ffmpeg.HasExited)
-					Task.Delay(250).Wait();
-			}
-			catch (Exception ex)
-			{
-				Program.Instance.Logger.LogDiscord(new LogMessage(LogSeverity.Warning, "ffmpeg", $"Could not reprocess downloaded song:\n\r{ffmpeg.StandardOutput.ReadToEnd()}"));
-				return Task.FromException(ex);
-			}
-
-			File.Delete($"{filePath}.ogg"); // Don't keep original
-
-			return Task.CompletedTask;
-		}
-
 		private void PopOldest()
 		{
 			DateTime useTime = DateTime.UtcNow;
-			string usePath = String.Empty;
-
 			foreach (DateTime time in Files.Keys)
 			{
 				// If it's less than 'Now', it's older
@@ -143,7 +102,7 @@ namespace MusicBot.Services
 				}
 			}
 
-			if(Files.TryRemove(useTime, out usePath))
+			if(Files.TryRemove(useTime, out string usePath))
 			{
 				if (File.Exists(usePath))
 					File.Delete(usePath);
