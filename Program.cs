@@ -26,6 +26,7 @@ namespace MusicBot
 		public int MaxFiles { get { return Config.MaxFiles; } }
 		public int MaxRequests { get { return Config.MaxRequests; } }
 		public string Channel { get { return Config.ChannelName; } }
+		public bool PreferFFMpeg { get { return Config.PreferFFMpeg; } }
 
 		public static ConcurrentDictionary<ulong, IAudioClient> Connections = new ConcurrentDictionary<ulong, IAudioClient>();
 		public static ConcurrentDictionary<ulong, ConcurrentQueue<Song>> Queues = new ConcurrentDictionary<ulong, ConcurrentQueue<Song>>();
@@ -132,13 +133,10 @@ namespace MusicBot
 				{
 					foreach (var guild in _client.Guilds)
 					{
-						if (guild.Id == 199954195334299648U)
+						if (Instance.Audio.Stopped)
 						{
-							if (Instance.Audio.Stopped)
-							{
-								await OnLoseGuild(guild);
-								await OnGuildAvailable(guild);
-							}
+							await OnLoseGuild(guild);
+							await OnGuildAvailable(guild);
 						}
 					}
 
@@ -194,12 +192,15 @@ namespace MusicBot
 
 			public string Token { get; set; }
 
+			public bool PreferFFMpeg { get; set; } = false;
+
 			public Configuration(string[] args)
 			{
 				ChannelName = args.ElementAtOrDefault(Array.FindIndex(args, s => s.Equals("--channel")) + 1);
 				MaxRequests = int.Parse(args.ElementAtOrDefault(Array.FindIndex(args, s => s.Equals("--max-requests")) + 1));
 				MaxFiles = int.Parse(args.ElementAtOrDefault(Array.FindIndex(args, s => s.Equals("--max-files")) + 1));
 				Token = args.ElementAtOrDefault(Array.FindIndex(args, s => s.Equals("--token")) + 1);
+				PreferFFMpeg = Array.FindIndex(args, s => s.Equals("--prefer-ffmpeg")) != -1;
 			}
 
 			public override string ToString()
@@ -209,6 +210,7 @@ namespace MusicBot
 				result += $"Maximum requests: {MaxRequests.ToString()}" + "\n\r";
 				result += $"Maximum stored files: {MaxFiles.ToString()}" + "\n\r";
 				result += $"Bot token: {Token}" + "\n\r";
+				result += $"Prefer FFMPeg: {PreferFFMpeg}" + "\n\r";
 				return result;
 			}
 		};

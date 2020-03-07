@@ -169,7 +169,7 @@ namespace MusicBot
 										:
 										$"00:00:{splits[0]}";
 
-				if (TimeSpan.Parse(formattedDur).TotalHours > 1)
+				if (TimeSpan.Parse(formattedDur).TotalHours > 0.8)
 				{
 					userMessage?.Channel.SendMessageAsync("Woah there! That video's a little big 'innit?");
 					tcs.SetResult(new Song());
@@ -221,7 +221,7 @@ namespace MusicBot
 						return;
 					}
 
-					if ((DateTime.Now - lastTick).Milliseconds >= 1000 || perc < 2 || perc > 98)
+					if ((DateTime.Now - lastTick).Milliseconds >= 600 || perc < 2 || perc > 98)
 					{
 						string status = "Downloading...\n";
 
@@ -253,15 +253,12 @@ namespace MusicBot
 				{
 					if (ProgressBucket.TryDequeue(out var status))
 					{
-						userMessage?.ModifyAsync(mp =>
-						{
-							mp.Content = status;
-						},
-						new RequestOptions
+						var options = new RequestOptions
 						{
 							RetryMode = RetryMode.RetryRatelimit,
 							Timeout = null
-						});
+						};
+						userMessage?.ModifyAsync(mp => { mp.Content = status; }, options);
 
 						Thread.Sleep(1000);
 					}
@@ -296,7 +293,7 @@ namespace MusicBot
 		{
 			var tcs = new TaskCompletionSource<Song>();
 
-			string original = file.Remove(file.Length - 4, 4);
+			string original = file.Remove(file.LastIndexOf('.'), 4);
 			original = string.Concat(original, ".ogg");
 
 			var ProgressBucket = new ConcurrentQueue<string>();
@@ -327,7 +324,7 @@ namespace MusicBot
 										:
 										$"00:00:{splits[0]}";
 
-				if(TimeSpan.Parse(formattedDur).TotalHours > 0.8)
+				if (TimeSpan.Parse(formattedDur).TotalHours > 0.8)
 				{
 					userMessage?.Channel.SendMessageAsync("Woah there! That video's a little big 'innit?");
 					tcs.SetResult(new Song());
@@ -379,7 +376,7 @@ namespace MusicBot
 						return;
 					}
 
-					if ((DateTime.Now - lastTick).Milliseconds >= 1000 || perc < 2 || perc > 98)
+					if ((DateTime.Now - lastTick).Milliseconds >= 600 || perc < 2 || perc > 98)
 					{
 						string status = "Downloading...\n";
 
@@ -411,15 +408,12 @@ namespace MusicBot
 				{
 					if (ProgressBucket.TryDequeue(out var status))
 					{
-						userMessage?.ModifyAsync(mp =>
-						{
-							mp.Content = status;
-						},
-						new RequestOptions
+						var options = new RequestOptions
 						{
 							RetryMode = RetryMode.RetryRatelimit,
 							Timeout = null
-						});
+						};
+						userMessage?.ModifyAsync(mp => { mp.Content = status; }, options);
 
 						Thread.Sleep(1000);
 					}

@@ -36,75 +36,10 @@ namespace MusicBot.Services
 		public async Task SendAudio(Song song, IAudioClient client)
 		{
 			failed = Skip = Exit = false;
-			try
-			{
-				using (var mediaStream = new WaveChannel32(new MediaFoundationReader(song.FilePath), .6f, 0f))
-				using (var resampler = new MediaFoundationResampler(mediaStream, OutFormat)) // Create a Disposable Resampler, which will convert the read MP3 data to PCM, using our Output Format
-				//using (var mediaStream = CreateStream(song.FilePath).StandardOutput.BaseStream)
-				using (var outStream = client.CreatePCMStream(AudioApplication.Music))
-				{
-					resampler.ResamplerQuality = 60; // Set the quality of the resampler to 60, the highest quality
-					mediaStream.PadWithZeroes = false; // Stop when we hit the end of the file
-					int blockSize = OutFormat.AverageBytesPerSecond / 60; // Establish the size of our audio buffer
-					byte[] buffer = new byte[blockSize];
-
-					StartTime = DateTime.Now;
-
-					await _client.SetGameAsync(song.Name, "http://twitch.tv/0", ActivityType.Streaming);
-
-					while (!Skip && !Exit && !failed && !_disposeToken.IsCancellationRequested) // Read audio into our buffer, and keep a loop open while data is present
-					{
-						try
-						{
-							if (resampler.Read(buffer, 0, blockSize) == 0/* || !mediaStream.HasData(blockSize)*/)
-							{
-								Exit = true;
-								continue;
-							}
-
-							//await mediaStream.CopyToAsync(outStream, OutFormat.AverageBytesPerSecond, _disposeToken.Token);
-
-							await outStream.WriteAsync(buffer, 0, blockSize, _disposeToken.Token);
-
-							if (Pause)
-							{
-								bool pauseAgain;
-
-								do
-								{
-									pauseAgain = await _tcs.Task;
-									_tcs = new TaskCompletionSource<bool>();
-								} while (pauseAgain);
-							}
-						}
-						catch (TaskCanceledException)
-						{
-							Exit = true;
-						}
-						catch
-						{
-							failed = true;
-						}
-					}
-
-					await outStream.FlushAsync();
-
-					await _client.SetGameAsync("?play <url>", "http://twitch.tv/0", ActivityType.Streaming);
-
-					Exit = true;
-
-					if (failed)
-						throw new Exception("Bad stream data encountered, possibly incomplete or corrupt file.");
-				}
-			}
-			catch (Exception ex)
-			{
-				await Program.Instance.Logger.LogDiscord(new LogMessage(LogSeverity.Critical, "Audio", ex.Message)); // Prints any errors to console
-				// Assume a corrupt file and delete it
-				//string pairedJson = song.FilePath + ".info.json";
-				//File.Delete(song.FilePath);
-				//File.Delete(pairedJson);
-			}
+			if (Program.Instance.PreferFFMpeg)
+				await SendAudioOverFFMpeg(song, client);
+			else
+				await SendAudioOverNAudio(song, client);
 		}
 
 		public bool IsPlaying(Song song) => (DateTime.Now - StartTime).CompareTo(song.Duration) <= 0;
@@ -144,6 +79,135 @@ namespace MusicBot.Services
 		private bool failed { get; set; }
 
 		private DateTime StartTime { get; set; }
+
+		async Task SendAudioOverNAudio(Song song, IAudioClient client)
+		{
+			try
+			{
+				using (var mediaStream = new WaveChannel32(new MediaFoundationReader(song.FilePath), .6f, 0f))
+				using (var resampler = new MediaFoundationResampler(mediaStream, OutFormat)) // Create a Disposable Resampler, which will convert the read MP3 data to PCM, using our Output Format
+				using (var outStream = client.CreatePCMStream(AudioApplication.Music))
+				{
+					resampler.ResamplerQuality = 60; // Set the quality of the resampler to 60, the highest quality
+					mediaStream.PadWithZeroes = false; // Stop when we hit the end of the file
+					int blockSize = OutFormat.AverageBytesPerSecond / 60; // Establish the size of our audio buffer
+					byte[] buffer = new byte[blockSize];
+
+					StartTime = DateTime.Now;
+
+					await _client.SetGameAsync(song.Name, "http://twitch.tv/0", ActivityType.Streaming);
+
+					while (!Skip && !Exit && !failed && !_disposeToken.IsCancellationRequested) // Read audio into our buffer, and keep a loop open while data is present
+					{
+						try
+						{
+							if (resampler.Read(buffer, 0, blockSize) == 0/* || !mediaStream.HasData(blockSize)*/)
+							{
+								Exit = true;
+								continue;
+							}
+
+							await outStream.WriteAsync(buffer, 0, blockSize, _disposeToken.Token);
+
+							if (Pause)
+							{
+								bool pauseAgain;
+
+								do
+								{
+									pauseAgain = await _tcs.Task;
+									_tcs = new TaskCompletionSource<bool>();
+								} while (pauseAgain);
+							}
+						}
+						catch (TaskCanceledException)
+						{
+							Exit = true;
+						}
+						catch
+						{
+							failed = true;
+						}
+					}
+
+					await outStream.FlushAsync();
+
+					await _client.SetGameAsync("?play <url>", "http://twitch.tv/0", ActivityType.Streaming);
+
+					Exit = true;
+
+					if (failed)
+						throw new Exception("Bad stream data encountered, possibly incomplete or corrupt file.");
+				}
+			}
+			catch (Exception ex)
+			{
+				await Program.Instance.Logger.LogDiscord(new LogMessage(LogSeverity.Critical, "Audio", ex.Message)); // Prints any errors to console
+			}
+		}
+
+		async Task SendAudioOverFFMpeg(Song song, IAudioClient client)
+		{
+			try
+			{
+				using (var mediaStream = CreateStream(song.FilePath).StandardOutput.BaseStream)
+				using (var outStream = client.CreatePCMStream(AudioApplication.Music))
+				{
+					int blockSize = OutFormat.AverageBytesPerSecond / 60; // Establish the size of our audio buffer
+					byte[] buffer = new byte[blockSize];
+
+					StartTime = DateTime.Now;
+
+					await _client.SetGameAsync(song.Name, "http://twitch.tv/0", ActivityType.Streaming);
+
+					while (!Skip && !Exit && !failed && !_disposeToken.IsCancellationRequested) // Read audio into our buffer, and keep a loop open while data is present
+					{
+						try
+						{
+							if(await mediaStream.ReadAsync(buffer, 0, blockSize, _disposeToken.Token) == 0)
+							{
+								Exit = true;
+								continue;
+							}
+
+							await outStream.WriteAsync(buffer, 0, blockSize, _disposeToken.Token);
+
+							if (Pause)
+							{
+								bool pauseAgain;
+
+								do
+								{
+									pauseAgain = await _tcs.Task;
+									_tcs = new TaskCompletionSource<bool>();
+								} while (pauseAgain);
+							}
+						}
+						catch (TaskCanceledException)
+						{
+							Exit = true;
+						}
+						/*catch
+						{
+							failed = true;
+						}*/
+					}
+
+					await outStream.FlushAsync();
+
+					await _client.SetGameAsync("?play <url>", "http://twitch.tv/0", ActivityType.Streaming);
+
+					Exit = true;
+
+					if (failed)
+						throw new Exception("Bad stream data encountered, possibly incomplete or corrupt file.");
+				}
+			}
+			catch (Exception ex)
+			{
+				await Program.Instance.Logger.LogDiscord(new LogMessage(LogSeverity.Critical, "Audio", ex.Message)); // Prints any errors to console
+			}
+		}
 
 		private Process CreateStream(string path)
 		{
