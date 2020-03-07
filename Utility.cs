@@ -38,7 +38,7 @@ namespace MusicBot
 			if (output.Any(c => Path.GetInvalidPathChars().Contains(c)))
 				throw new ArgumentException($"Bad output: '{output}'");
 
-			if (url.Split("://", StringSplitOptions.None)[1] == "youtu.be")
+			if (url.Split("://", StringSplitOptions.None)[1].Contains("youtu.be"))
 				url = "https://www.youtube.com/watch?v=" + url.Split(".be/", StringSplitOptions.None)[1];
 
 			if (url.ToLower().Contains("youtube.com"))
@@ -101,8 +101,8 @@ namespace MusicBot
 						UseShellExecute = false
 					});
 
-					/*while (!youtubedl.HasExited)
-						Thread.Sleep(100);*/
+					while (!youtubedl.HasExited)
+						Thread.Sleep(100);
 
 					//Read
 					string[] lines = youtubedl.StandardOutput.ReadToEnd().Split('\n');
@@ -507,7 +507,7 @@ namespace System
 		/// <exception cref="ArgumentException">
 		/// <paramref name="options"/> is not one of the System.StringSplitOptions values.
 		/// </exception>
-		public static string[] Split(this String src, string seperator, StringSplitOptions options)
+		public static string[] Split(this string src, string seperator, StringSplitOptions options)
 		{
 			var separr = new string[1] { seperator };
 			return src.Split(separr, options);

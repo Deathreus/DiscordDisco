@@ -26,7 +26,7 @@ namespace MusicBot.Commands
 
 			bool pause = Program.Instance.Audio.Pause;
 			Program.Instance.Audio.Pause = !pause;
-			await ReplyAsync(String.Format("Forcefully {0}paused the current song", !pause ? "un" : String.Empty));
+			await ReplyAsync(String.Format("Forcefully {0}paused the current song", pause ? "un" : String.Empty));
 		}
 	}
 }
