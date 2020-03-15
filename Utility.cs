@@ -75,6 +75,17 @@ namespace MusicBot
 			return false;
 		}
 
+		private static Process CreateDLProcess(string args)
+		{
+			return Process.Start(new ProcessStartInfo
+			{
+				FileName = ".\\bin\\youtube-dl",
+				Arguments = args,
+				CreateNoWindow = true,
+				RedirectStandardOutput = true,
+				UseShellExecute = false
+			});
+		}
 
 		/// <summary>
 		/// Get video title and duration from YouTube URL
@@ -92,15 +103,7 @@ namespace MusicBot
 					string duration;
 
 					//Get Video info
-					var youtubedl = Process.Start(new ProcessStartInfo
-					{
-						FileName = ".\\bin\\youtube-dl",
-						Arguments = $"-s --get-title --get-duration {url}",
-						CreateNoWindow = true,
-						RedirectStandardOutput = true,
-						UseShellExecute = false
-					});
-
+					var youtubedl = CreateDLProcess($"-s --get-title --get-duration {url}");
 					while (!youtubedl.HasExited)
 						Thread.Sleep(100);
 
@@ -177,69 +180,12 @@ namespace MusicBot
 				}
 
 				//Download Video
-				var youtubedl = new Process
-				{
-					StartInfo = new ProcessStartInfo
-					{
-						FileName = ".\\bin\\youtube-dl",
-						Arguments = $"{arguments} -o \"{original}\" {url}",
-						CreateNoWindow = false,
-						RedirectStandardOutput = true,
-						UseShellExecute = false
-					}
-				};
+				var youtubedl = CreateDLProcess($"{arguments} -o \"{original}\" {url}");
 
 				DateTimeOffset lastTick = DateTime.Now;
-
-				youtubedl.OutputDataReceived += async (s, e) =>
-				{
-					if (string.IsNullOrEmpty(e.Data) || youtubedl.HasExited)
-					{
-						return;
-					}
-
-					if (e.Data.Contains("ERROR"))
-					{
-						await Program.Instance.Logger.LogDiscord(new LogMessage(LogSeverity.Error, "youtube-dl", e.Data));
-						return;
-					}
-
-					if (!e.Data.Contains("[download]"))
-					{
-						return;
-					}
-
-					if (!Regex.IsMatch(e.Data, @"\b\d+([\.,]\d+)?", RegexOptions.None))
-					{
-						return;
-					}
-
-					var perc = Convert.ToDecimal(Regex.Match(e.Data, @"\b\d+([\.,]\d+)?").Value);
-					if (perc > 100 || perc < 0)
-					{
-						Console.WriteLine($"Odd data: {perc}");
-						return;
-					}
-
-					if ((DateTime.Now - lastTick).Milliseconds >= 600 || perc < 2 || perc > 98)
-					{
-						string status = "Downloading...\n";
-
-						int percent = (int)(perc/100 * 10);
-
-						int i;
-						for (i = 0; i < percent; i++)
-							status += "▬";
-
-						status += "\uD83D\uDD18";
-
-						for (; i < 10; i++)
-							status += "▬";
-
-						ProgressBucket.Enqueue(status);
-
-						lastTick = DateTime.Now;
-					}
+				youtubedl.OutputDataReceived += (s, e) => {
+					CalculateProgressBucket(youtubedl, ProgressBucket, ref lastTick, e);
+					TryPerformProgressUpdate(ref ProgressBucket, userMessage);
 				};
 
 				youtubedl.Start();
@@ -248,21 +194,6 @@ namespace MusicBot
 				//Wait until download is finished
 				while (!youtubedl.HasExited)
 					Thread.Sleep(100);
-
-				while (ProgressBucket.Count > 0)
-				{
-					if (ProgressBucket.TryDequeue(out var status))
-					{
-						var options = new RequestOptions
-						{
-							RetryMode = RetryMode.RetryRatelimit,
-							Timeout = null
-						};
-						userMessage?.ModifyAsync(mp => { mp.Content = status; }, options);
-
-						Thread.Sleep(1000);
-					}
-				}
 
 				if (File.Exists(original))
 				{
@@ -332,69 +263,12 @@ namespace MusicBot
 				}
 
 				//Download track
-				var youtubedl = new Process
-				{
-					StartInfo = new ProcessStartInfo
-					{
-						FileName = ".\\bin\\youtube-dl",
-						Arguments = $"{arguments} -o \"{file}\" {url}",
-						CreateNoWindow = true,
-						RedirectStandardOutput = true,
-						UseShellExecute = false
-					}
-				};
+				var youtubedl = CreateDLProcess($"{arguments} -o \"{file}\" {url}");
 
 				DateTimeOffset lastTick = DateTime.Now;
-
-				youtubedl.OutputDataReceived += async (s, e) =>
-				{
-					if (string.IsNullOrEmpty(e.Data) || youtubedl.HasExited)
-					{
-						return;
-					}
-
-					if (e.Data.Contains("ERROR"))
-					{
-						await Program.Instance.Logger.LogDiscord(new LogMessage(LogSeverity.Error, "youtube-dl", e.Data));
-						return;
-					}
-
-					if (!e.Data.Contains("[download]"))
-					{
-						return;
-					}
-
-					if (!Regex.IsMatch(e.Data, @"\b\d+([\.,]\d+)?", RegexOptions.None))
-					{
-						return;
-					}
-
-					var perc = Convert.ToDecimal(Regex.Match(e.Data, @"\b\d+([\.,]\d+)?").Value);
-					if (perc > 100 || perc < 0)
-					{
-						Console.WriteLine($"Odd data: {perc}");
-						return;
-					}
-
-					if ((DateTime.Now - lastTick).Milliseconds >= 600 || perc < 2 || perc > 98)
-					{
-						string status = "Downloading...\n";
-
-						int percent = (int)((perc / 100) * 10);
-
-						int i;
-						for (i = 0; i < percent; i++)
-							status += "▬";
-
-						status += "\uD83D\uDD18";
-
-						for (; i < 10; i++)
-							status += "▬";
-
-						ProgressBucket.Enqueue(status);
-
-						lastTick = DateTime.Now;
-					}
+				youtubedl.OutputDataReceived += (s, e) => {
+					CalculateProgressBucket(youtubedl, ProgressBucket, ref lastTick, e);
+					TryPerformProgressUpdate(ref ProgressBucket, userMessage);
 				};
 
 				youtubedl.Start();
@@ -403,21 +277,6 @@ namespace MusicBot
 				//Wait until download is finished
 				while (!youtubedl.HasExited)
 					Thread.Sleep(100);
-
-				while (ProgressBucket.Count > 0)
-				{
-					if (ProgressBucket.TryDequeue(out var status))
-					{
-						var options = new RequestOptions
-						{
-							RetryMode = RetryMode.RetryRatelimit,
-							Timeout = null
-						};
-						userMessage?.ModifyAsync(mp => { mp.Content = status; }, options);
-
-						Thread.Sleep(1000);
-					}
-				}
 
 				if (File.Exists(original))
 				{
@@ -442,6 +301,72 @@ namespace MusicBot
 				throw new Exception("youtube-dl.exe failed to download!");
 
 			return result;
+		}
+
+		private static void CalculateProgressBucket(Process proc, ConcurrentQueue<string> bucket, ref DateTimeOffset lastTick, DataReceivedEventArgs e)
+		{
+			if (string.IsNullOrEmpty(e.Data) || proc.HasExited)
+			{
+				return;
+			}
+
+			if (e.Data.Contains("ERROR"))
+			{
+				Program.Instance.Logger.LogDiscord(new LogMessage(LogSeverity.Error, "youtube-dl", e.Data));
+				return;
+			}
+
+			if (!e.Data.Contains("[download]"))
+			{
+				return;
+			}
+
+			if (!Regex.IsMatch(e.Data, @"\b\d+([\.,]\d+)?", RegexOptions.None))
+			{
+				return;
+			}
+
+			var perc = Convert.ToDecimal(Regex.Match(e.Data, @"\b\d+([\.,]\d+)?").Value);
+			if (perc > 100 || perc < 0)
+			{
+				Console.WriteLine($"Odd data: {perc}");
+				return;
+			}
+
+			if ((DateTime.Now - lastTick).Milliseconds >= 600 || perc < 2 || perc > 98)
+			{
+				string status = "Downloading...\n";
+
+				int percent = (int)(perc / 100 * 10);
+
+				int i;
+				for (i = 0; i < percent; i++)
+					status += "▬";
+
+				status += "\uD83D\uDD18";
+
+				for (; i < 10; i++)
+					status += "▬";
+
+				bucket.Enqueue(status);
+
+				lastTick = DateTime.Now;
+			}
+		}
+
+		private static void TryPerformProgressUpdate(ref ConcurrentQueue<string> bucket, IUserMessage userMessage)
+		{
+			if (bucket.TryDequeue(out var status))
+			{
+				var options = new RequestOptions
+				{
+					RetryMode = RetryMode.RetryRatelimit,
+					Timeout = null
+				};
+				userMessage?.ModifyAsync(mp => { mp.Content = status; }, options);
+
+				Thread.Sleep(800);
+			}
 		}
 
 		private static readonly string arguments = "--extract-audio --audio-format vorbis --audio-quality 128 --no-cache-dir --prefer-ffmpeg --limit-rate 1.2M";

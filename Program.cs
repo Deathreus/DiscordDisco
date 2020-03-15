@@ -89,7 +89,7 @@ namespace MusicBot
 			await Task.Delay(-1);
 		}
 
-		private Task OnLoseGuild(SocketGuild guild)
+		private static Task OnLoseGuild(SocketGuild guild)
 		{
 			if (Connections.TryRemove(guild.Id, out var client))
 			{
@@ -99,17 +99,17 @@ namespace MusicBot
 			if (Queues.TryRemove(guild.Id, out var queue))
 			{
 				do {
-					queue.TryDequeue(out var __);
+					queue.TryDequeue(out var _);
 				} while (!queue.IsEmpty);
 			}
 
 			return Task.CompletedTask;
 		}
 
-		private Task OnGuildAvailable(SocketGuild guild)
+		private static Task OnGuildAvailable(SocketGuild guild)
 		{
 			string name = Config.ChannelName;
-			IVoiceChannel channel = guild.VoiceChannels.Where(c => c.Name.Equals(name)).Single();
+			IVoiceChannel channel = guild.VoiceChannels.Where(c => c.Name.Equals(name)).SingleOrDefault();
 			if (channel != null)
 			{
 				Task.Run(async () =>
