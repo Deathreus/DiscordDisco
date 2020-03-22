@@ -1,5 +1,6 @@
 ﻿using System.Threading;
 using System.Linq;
+using System.Threading.Tasks;
 
 namespace MusicBot.Services
 {
@@ -8,7 +9,7 @@ namespace MusicBot.Services
 	{
 		public QueueService()
 		{
-			WorkerThread = new Thread(async () =>
+			WorkerThread = new Thread(() =>
 				{
 					while (true)
 					{
@@ -30,7 +31,9 @@ namespace MusicBot.Services
 							if (queue.TryDequeue(out Song song))
 							{
 								MusicBot.Commands.Skip.Reset(guildID);
-								await Program.Instance.Audio.SendAudio(song, client);
+								Task.Run(async () => {
+									await Program.Instance.Audio.SendAudio(song, client);
+								});
 							}
 						}
 

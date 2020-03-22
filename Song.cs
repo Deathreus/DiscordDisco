@@ -4,8 +4,8 @@ namespace MusicBot
 {
 	public class Song
 	{
-		public string Name;
-		public string FilePath;
-		public TimeSpan Duration;
+		public string Name { get; set; }
+		public string FilePath { get; set; }
+		public TimeSpan Duration { get; set; }
 	}
 }

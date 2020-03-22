@@ -137,6 +137,10 @@ namespace MusicBot
 			return result;
 		}
 
+		// Only update the download bar once, just incase it tries to do multiple
+		private static bool Started { get; set; }
+		private static bool Finished { get; set; }
+
 		private static async Task<Song> DownloadFromYouTube(string url, string file, IUserMessage userMessage)
 		{
 			var tcs = new TaskCompletionSource<Song>();
@@ -179,12 +183,13 @@ namespace MusicBot
 					return;
 				}
 
+				Started = Finished = false;
 				//Download Video
 				var youtubedl = CreateDLProcess($"{arguments} -o \"{original}\" {url}");
 
 				DateTimeOffset lastTick = DateTime.Now;
 				youtubedl.OutputDataReceived += (s, e) => {
-					CalculateProgressBucket(youtubedl, ProgressBucket, ref lastTick, e);
+					CalculateProgressBucket(youtubedl, ref ProgressBucket, ref lastTick, e);
 					TryPerformProgressUpdate(ref ProgressBucket, userMessage);
 				};
 
@@ -262,12 +267,13 @@ namespace MusicBot
 					return;
 				}
 
+				Started = Finished = false;
 				//Download track
 				var youtubedl = CreateDLProcess($"{arguments} -o \"{file}\" {url}");
 
 				DateTimeOffset lastTick = DateTime.Now;
 				youtubedl.OutputDataReceived += (s, e) => {
-					CalculateProgressBucket(youtubedl, ProgressBucket, ref lastTick, e);
+					CalculateProgressBucket(youtubedl, ref ProgressBucket, ref lastTick, e);
 					TryPerformProgressUpdate(ref ProgressBucket, userMessage);
 				};
 
@@ -303,7 +309,7 @@ namespace MusicBot
 			return result;
 		}
 
-		private static void CalculateProgressBucket(Process proc, ConcurrentQueue<string> bucket, ref DateTimeOffset lastTick, DataReceivedEventArgs e)
+		private static void CalculateProgressBucket(Process proc, ref ConcurrentQueue<string> bucket, ref DateTimeOffset lastTick, DataReceivedEventArgs e)
 		{
 			if (string.IsNullOrEmpty(e.Data) || proc.HasExited)
 			{
@@ -333,7 +339,7 @@ namespace MusicBot
 				return;
 			}
 
-			if ((DateTime.Now - lastTick).Milliseconds >= 600 || perc < 2 || perc > 98)
+			if ((DateTime.Now - lastTick).Milliseconds > 850 || (perc < 9 && !Started) || (perc > 91 && !Finished))
 			{
 				string status = "Downloading...\n";
 
@@ -351,6 +357,11 @@ namespace MusicBot
 				bucket.Enqueue(status);
 
 				lastTick = DateTime.Now;
+
+				if (perc < 2)
+					Started = true;
+				if (perc > 98)
+					Finished = true;
 			}
 		}
 
@@ -364,12 +375,10 @@ namespace MusicBot
 					Timeout = null
 				};
 				userMessage?.ModifyAsync(mp => { mp.Content = status; }, options);
-
-				Thread.Sleep(800);
 			}
 		}
 
-		private static readonly string arguments = "--extract-audio --audio-format vorbis --audio-quality 128 --no-cache-dir --prefer-ffmpeg --limit-rate 1.2M";
+		private const string arguments = "--extract-audio --audio-format vorbis --audio-quality 128 --no-cache-dir --prefer-ffmpeg --limit-rate 1.2M";
 	}
 
 	public abstract class SocketModuleBase : ModuleBase<SocketCommandContext> {}
@@ -377,7 +386,7 @@ namespace MusicBot
 
 namespace System
 {
-	public static class _String
+	public static class Extensions
 	{
 		/// <summary>
 		/// Retrieves a substring from this instance. The substring starts after a given
@@ -387,14 +396,20 @@ namespace System
 		/// <returns>
 		/// A new <see cref="string"/> instance.
 		/// </returns>
+		/// <exception cref="ArgumentNullException">
+		/// One or all of the passed arguments are null.
+		/// </exception>
 		public static string Substring(this String src, string start, string end)
 		{
+			if (src == null || start == null || end == null)
+				throw new ArgumentNullException();
+
 			int Start, End;
 
 			if (src.Contains(start) && src.Contains(end))
 			{
-				Start = src.IndexOf(start, 0) + start.Length;
-				End = src.IndexOf(end, Start);
+				Start = src.IndexOf(start, 0, StringComparison.InvariantCulture) + start.Length;
+				End = src.IndexOf(end, Start, StringComparison.InvariantCulture);
 
 				return src.Substring(Start, End - Start);
 			}
@@ -429,7 +444,7 @@ namespace System
 		public static string[] Split(this string src, string seperator, StringSplitOptions options)
 		{
 			var separr = new string[1] { seperator };
-			return src.Split(separr, options);
+			return src?.Split(separr, options);
 		}
 
 		public static UInt32 QuickHash(this string src)
@@ -449,7 +464,7 @@ namespace System
 			return hash;
 		}
 
-		public static void FormatForURL(this string src, string whitespaceReplacement/*, char[] toTrim, string[] toStrip*/)
+		public static void FormatForURL(this string src, string whitespaceReplacement, char[] toTrim = null, string[] toStrip = null)
 		{
 			// Just start off by trimming all whitespace from the front and tail
 			src = src.Trim();
@@ -458,7 +473,7 @@ namespace System
 			// beginning or end if it exists and isn't encapsulating the whole string
 			if (src[0] == '"' && src[src.Length - 1] == '"')
 				src = src.Trim('"');
-			/*
+			
 			// Additional characters we'd like stripped
 			foreach (var trim in toTrim)
 				src = src.Trim(trim);
@@ -466,7 +481,7 @@ namespace System
 			// Strings we'd like omitted from the final result
 			foreach (var strip in toStrip)
 				src = src.Replace(strip, "");
-			*/
+			
 			// Finally, substitute our whitespace
 			src = src.Replace(" ", whitespaceReplacement);
 		}

@@ -17,7 +17,7 @@ using MusicBot.Services;
 
 namespace MusicBot
 {
-	public class Program
+	public sealed class Program : IDisposable
 	{
 		public LogService Logger { get; private set; }
 		public AudioService Audio { get; private set; }
@@ -94,6 +94,7 @@ namespace MusicBot
 			if (Connections.TryRemove(guild.Id, out var client))
 			{
 				client.StopAsync();
+				client.Dispose();
 			}
 
 			if (Queues.TryRemove(guild.Id, out var queue))
@@ -161,7 +162,7 @@ namespace MusicBot
 			await provider.GetRequiredService<CommandHandlingService>().InitializeAsync(provider);
 		}
 
-		private void Dispose()
+		public void Dispose()
 		{
 			var guilds = _client.Guilds.ToList();
 			foreach (var guild in guilds)

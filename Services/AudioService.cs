@@ -35,11 +35,11 @@ namespace MusicBot.Services
 
 		public async Task SendAudio(Song song, IAudioClient client)
 		{
-			failed = Skip = Exit = false;
-			if (Program.Instance.PreferFFMpeg)
-				await SendAudioOverFFMpeg(song, client);
+			Failed = Skip = Exit = false;
+			if (Program.PreferFFMpeg)
+				await SendAudioOverFFMpeg(song, client).ConfigureAwait(true);
 			else
-				await SendAudioOverNAudio(song, client);
+				await SendAudioOverNAudio(song, client).ConfigureAwait(true);
 		}
 
 		public bool IsPlaying(Song song) => (DateTime.Now - StartTime).CompareTo(song.Duration) <= 0;
@@ -76,7 +76,7 @@ namespace MusicBot.Services
 
 		public WaveFormat OutFormat { get; }
 
-		private bool failed { get; set; }
+		private bool Failed { get; set; }
 
 		private DateTime StartTime { get; set; }
 
@@ -84,7 +84,8 @@ namespace MusicBot.Services
 		{
 			try
 			{
-				using (var mediaStream = new WaveChannel32(new MediaFoundationReader(song.FilePath), .6f, 0f))
+				using (var reader = new MediaFoundationReader(song.FilePath))
+				using (var mediaStream = new WaveChannel32(reader, .6f, 0f))
 				using (var resampler = new MediaFoundationResampler(mediaStream, OutFormat)) // Create a Disposable Resampler, which will convert the read MP3 data to PCM, using our Output Format
 				using (var outStream = client.CreatePCMStream(AudioApplication.Music))
 				{
@@ -97,7 +98,7 @@ namespace MusicBot.Services
 
 					await _client.SetGameAsync(song.Name, "http://twitch.tv/0", ActivityType.Streaming);
 
-					while (!Skip && !Exit && !failed && !_disposeToken.IsCancellationRequested) // Read audio into our buffer, and keep a loop open while data is present
+					while (!Skip && !Exit && !Failed && !_disposeToken.IsCancellationRequested) // Read audio into our buffer, and keep a loop open while data is present
 					{
 						try
 						{
@@ -126,7 +127,7 @@ namespace MusicBot.Services
 						}
 						catch
 						{
-							failed = true;
+							Failed = true;
 						}
 					}
 
@@ -136,7 +137,7 @@ namespace MusicBot.Services
 
 					Exit = true;
 
-					if (failed)
+					if (Failed)
 						throw new Exception("Bad stream data encountered, possibly incomplete or corrupt file.");
 				}
 			}
@@ -160,7 +161,7 @@ namespace MusicBot.Services
 
 					await _client.SetGameAsync(song.Name, "http://twitch.tv/0", ActivityType.Streaming);
 
-					while (!Skip && !Exit && !failed && !_disposeToken.IsCancellationRequested) // Read audio into our buffer, and keep a loop open while data is present
+					while (!Skip && !Exit && !Failed && !_disposeToken.IsCancellationRequested) // Read audio into our buffer, and keep a loop open while data is present
 					{
 						try
 						{
@@ -199,7 +200,7 @@ namespace MusicBot.Services
 
 					Exit = true;
 
-					if (failed)
+					if (Failed)
 						throw new Exception("Bad stream data encountered, possibly incomplete or corrupt file.");
 				}
 			}
@@ -209,7 +210,7 @@ namespace MusicBot.Services
 			}
 		}
 
-		private Process CreateStream(string path)
+		private static Process CreateStream(string path)
 		{
 			return Process.Start(new ProcessStartInfo
 			{
