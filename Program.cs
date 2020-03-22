@@ -5,6 +5,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using System.Collections.Concurrent;
 using System.Runtime.InteropServices;
+using System.IO;
 
 using Microsoft.Extensions.DependencyInjection;
 
@@ -123,11 +124,23 @@ namespace MusicBot
 			return Task.CompletedTask;
 		}
 
-		private async Task OnReady()
+		private Task OnReady()
 		{
-			await _client.SetGameAsync("?play <url>", "http://twitch.tv/0", ActivityType.Streaming);
+			_client.SetGameAsync("?play <url>", "http://twitch.tv/0", ActivityType.Streaming);
 
-			await Task.Run(async () =>
+			if (!File.Exists("banned-users.txt"))
+				File.CreateText("banned-users.txt");
+
+			// Update youtube-dl if possible
+			Process.Start(new ProcessStartInfo
+			{
+				FileName = ".\\bin\\youtube-dl",
+				Arguments = "--update ",
+				CreateNoWindow = true,
+				UseShellExecute = false
+			});
+
+			Task.Run(async () =>
 			{
 				while (true)
 				{
@@ -140,20 +153,19 @@ namespace MusicBot
 						}
 					}
 
-					await Task.Delay(TimeSpan.FromMinutes(6));
+					await Task.Delay(TimeSpan.FromMinutes(10));
 				}
-			}).ConfigureAwait(true);
+			}).ConfigureAwait(false);
+
+			return Task.CompletedTask;
 		}
 
 		private async Task FetchServices(IServiceProvider provider)
 		{
-			await Task.Run(() =>
-			{
-				provider.GetRequiredService<QueueService>();
-				Downloader = provider.GetRequiredService<PersistanceService>();
-				Audio = provider.GetRequiredService<AudioService>();
-				Logger = provider.GetRequiredService<LogService>();
-			});
+			provider.GetRequiredService<QueueService>();
+			Downloader = provider.GetRequiredService<PersistanceService>();
+			Audio = provider.GetRequiredService<AudioService>();
+			Logger = provider.GetRequiredService<LogService>();
 			await provider.GetRequiredService<CommandHandlingService>().InitializeAsync(provider);
 		}
 

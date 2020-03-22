@@ -22,6 +22,7 @@ namespace MusicBot.Services
 			_disposeToken = new CancellationTokenSource();
 			WebClient = new WebClient();
 			OutFormat = WaveFormat.CreateCustomFormat(WaveFormatEncoding.Pcm, 48000, 2, 192000, 4, 16);
+			Failed = Skip = Exit = false;
 		}
 
 		~AudioService()
@@ -69,8 +70,7 @@ namespace MusicBot.Services
 
 		public bool Exit { get; set; }
 
-		// Variable alias
-		public bool Stopped { get { return this.Exit; } }
+		public bool Stopped => Exit || Failed;
 
 		public WebClient WebClient { get; private set; }
 

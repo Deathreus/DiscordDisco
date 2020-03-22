@@ -41,6 +41,8 @@ namespace MusicBot
 			if (url.Split("://", StringSplitOptions.None)[1].Contains("youtu.be"))
 				url = "https://www.youtube.com/watch?v=" + url.Split(".be/", StringSplitOptions.None)[1];
 
+			Error = String.Empty;
+
 			if (url.ToLower().Contains("youtube.com"))
 			{
 				return await DownloadFromYouTube(url, output, userMessage);
@@ -188,7 +190,9 @@ namespace MusicBot
 				var youtubedl = CreateDLProcess($"{arguments} -o \"{original}\" {url}");
 
 				DateTimeOffset lastTick = DateTime.Now;
-				youtubedl.OutputDataReceived += (s, e) => {
+				youtubedl.OutputDataReceived += (s, e) =>
+				{
+					CollectErrorsOutput(youtubedl, e);
 					CalculateProgressBucket(youtubedl, ref ProgressBucket, ref lastTick, e);
 					TryPerformProgressUpdate(ref ProgressBucket, userMessage);
 				};
@@ -214,7 +218,7 @@ namespace MusicBot
 				{
 					//Error downloading
 					tcs.SetResult(null);
-					Program.Instance.Logger.LogDiscord(new LogMessage(LogSeverity.Warning, "youtube-dl", $"Could not download Song, youtube-dl responded with:\n\r"));//{youtubedl.StandardOutput.ReadToEnd()}
+					Program.Instance.Logger.LogDiscord(new LogMessage(LogSeverity.Warning, "youtube-dl", $"Could not download Song, youtube-dl responded with:\n{Error}"));
 				}
 			}).Start();
 
@@ -272,7 +276,9 @@ namespace MusicBot
 				var youtubedl = CreateDLProcess($"{arguments} -o \"{file}\" {url}");
 
 				DateTimeOffset lastTick = DateTime.Now;
-				youtubedl.OutputDataReceived += (s, e) => {
+				youtubedl.OutputDataReceived += (s, e) =>
+				{
+					CollectErrorsOutput(youtubedl, e);
 					CalculateProgressBucket(youtubedl, ref ProgressBucket, ref lastTick, e);
 					TryPerformProgressUpdate(ref ProgressBucket, userMessage);
 				};
@@ -298,7 +304,7 @@ namespace MusicBot
 				{
 					//Error downloading
 					tcs.SetResult(null);
-					Program.Instance.Logger.LogDiscord(new LogMessage(LogSeverity.Warning, "youtube-dl", $"Could not download Song, youtube-dl responded with:\n\r"));//{youtubedl.StandardOutput.ReadToEnd()}
+					Program.Instance.Logger.LogDiscord(new LogMessage(LogSeverity.Warning, "youtube-dl", $"Could not download Song, youtube-dl responded with:\n{Error}"));//
 				}
 			}).Start();
 
@@ -318,7 +324,6 @@ namespace MusicBot
 
 			if (e.Data.Contains("ERROR"))
 			{
-				Program.Instance.Logger.LogDiscord(new LogMessage(LogSeverity.Error, "youtube-dl", e.Data));
 				return;
 			}
 
@@ -358,9 +363,9 @@ namespace MusicBot
 
 				lastTick = DateTime.Now;
 
-				if (perc < 2)
+				if (perc < 9)
 					Started = true;
-				if (perc > 98)
+				if (perc > 91)
 					Finished = true;
 			}
 		}
@@ -375,6 +380,25 @@ namespace MusicBot
 					Timeout = null
 				};
 				userMessage?.ModifyAsync(mp => { mp.Content = status; }, options);
+			}
+		}
+
+		private static string Error { get; set; } = String.Empty;
+		private static void CollectErrorsOutput(Process proc, DataReceivedEventArgs e)
+		{
+			if (string.IsNullOrEmpty(e.Data) || proc.HasExited)
+			{
+				return;
+			}
+
+			if (e.Data.Contains("WARNING"))
+			{
+				Error += e.Data + "\n";
+			}
+
+			if (e.Data.Contains("ERROR"))
+			{
+				Error += e.Data + "\n";
 			}
 		}
 
