@@ -41,16 +41,15 @@ namespace MusicBot
 			Console.Write(Config);
 		#endif
 
-			SetConsoleCtrlHandler(new EventHandler((e) =>
+			var handler = new EventHandler((e) =>
 			{
 				Instance.Dispose();
-
 				Thread.SpinWait(3);
-
 				Environment.Exit(-1);
 
 				return true;
-			}), true);
+			});
+			SetConsoleCtrlHandler(handler, true);
 
 			Instance = new Program();
 			Instance.MainAsync().GetAwaiter().GetResult();
@@ -128,7 +127,7 @@ namespace MusicBot
 		{
 			await _client.SetGameAsync("?play <url>", "http://twitch.tv/0", ActivityType.Streaming);
 
-			new Thread(async () =>
+			await Task.Run(async () =>
 			{
 				while (true)
 				{
@@ -141,13 +140,9 @@ namespace MusicBot
 						}
 					}
 
-					Thread.Sleep(TimeSpan.FromMinutes(15));
+					await Task.Delay(TimeSpan.FromMinutes(6));
 				}
-			})
-			{
-				IsBackground = true,
-				Name = "KeepAlive Task"
-			}.Start();
+			}).ConfigureAwait(true);
 		}
 
 		private async Task FetchServices(IServiceProvider provider)
@@ -198,10 +193,13 @@ namespace MusicBot
 			public Configuration(string[] args)
 			{
 				ChannelName = args.ElementAtOrDefault(Array.FindIndex(args, s => s.Equals("--channel")) + 1);
-				MaxRequests = int.Parse(args.ElementAtOrDefault(Array.FindIndex(args, s => s.Equals("--max-requests")) + 1));
-				MaxFiles = int.Parse(args.ElementAtOrDefault(Array.FindIndex(args, s => s.Equals("--max-files")) + 1));
 				Token = args.ElementAtOrDefault(Array.FindIndex(args, s => s.Equals("--token")) + 1);
 				PreferFFMpeg = Array.FindIndex(args, s => s.Equals("--prefer-ffmpeg")) != -1;
+
+				if (int.TryParse(args.ElementAtOrDefault(Array.FindIndex(args, s => s.Equals("--max-requests")) + 1), out int maxRequests))
+					MaxRequests = maxRequests;
+				if (int.TryParse(args.ElementAtOrDefault(Array.FindIndex(args, s => s.Equals("--max-files")) + 1), out int maxFiles))
+					MaxFiles = maxFiles;
 			}
 
 			public override string ToString()
