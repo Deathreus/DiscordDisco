@@ -38,7 +38,7 @@ namespace MusicBot.Commands
 				return;
 			}
 
-			if(queue.Count >= Program.Instance.MaxRequests)
+			if(queue.Count >= Program.MaxRequests)
 			{
 				await ReplyAsync($"{Context.Message.Author.Mention}: Queue is full, try again later.");
 				return;

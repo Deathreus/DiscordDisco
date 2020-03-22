@@ -23,13 +23,13 @@ namespace MusicBot
 		public AudioService Audio { get; private set; }
 		public PersistanceService Downloader { get; private set; }
 		public IServiceProvider Services { get; private set; }
-		public int MaxFiles { get { return Config.MaxFiles; } }
-		public int MaxRequests { get { return Config.MaxRequests; } }
-		public string Channel { get { return Config.ChannelName; } }
-		public bool PreferFFMpeg { get { return Config.PreferFFMpeg; } }
+		public static int MaxFiles { get { return Config.MaxFiles; } }
+		public static int MaxRequests { get { return Config.MaxRequests; } }
+		public static string Channel { get { return Config.ChannelName; } }
+		public static bool PreferFFMpeg { get { return Config.PreferFFMpeg; } }
 
-		public static ConcurrentDictionary<ulong, IAudioClient> Connections = new ConcurrentDictionary<ulong, IAudioClient>();
-		public static ConcurrentDictionary<ulong, ConcurrentQueue<Song>> Queues = new ConcurrentDictionary<ulong, ConcurrentQueue<Song>>();
+		public static ConcurrentDictionary<ulong, IAudioClient> Connections { get; } = new ConcurrentDictionary<ulong, IAudioClient>();
+		public static ConcurrentDictionary<ulong, ConcurrentQueue<Song>> Queues { get; } = new ConcurrentDictionary<ulong, ConcurrentQueue<Song>>();
 
 		public static Program Instance { get; private set; }
 
@@ -110,7 +110,7 @@ namespace MusicBot
 		private static Task OnGuildAvailable(SocketGuild guild)
 		{
 			string name = Config.ChannelName;
-			IVoiceChannel channel = guild.VoiceChannels.Where(c => c.Name.Equals(name)).SingleOrDefault();
+			IVoiceChannel channel = guild.VoiceChannels.Where(c => c.Name.Equals(name, StringComparison.InvariantCultureIgnoreCase)).SingleOrDefault();
 			if (channel != null)
 			{
 				Task.Run(async () =>

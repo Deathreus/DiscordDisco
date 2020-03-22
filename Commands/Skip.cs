@@ -39,7 +39,7 @@ namespace MusicBot.Commands
 
 			await Context.Message.AddReactionAsync(new Discord.Emoji("👌"));
 
-			int ratio = (Context.Guild.VoiceChannels.First(c => c.Name.Equals(Program.Instance.Channel)).Users.Count / 4) + 1;
+			int ratio = (Context.Guild.VoiceChannels.First(c => c.Name.Equals(Program.Channel)).Users.Count / 4) + 1;
 
 			if (SkipVotes[ID] >= ratio)
 			{

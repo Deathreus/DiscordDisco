@@ -84,7 +84,7 @@ namespace MusicBot.Services
 					Program.Queues[context.Guild.Id].Enqueue(song);
 
 			// In case we get a ton of requests, arbitrarily limit how many we store
-			if (Files.Count > Program.Instance.MaxFiles)
+			if (Files.Count > Program.MaxFiles)
 				PopOldest();
 
 			return fileName;
