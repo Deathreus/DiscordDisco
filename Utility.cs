@@ -9,6 +9,7 @@ using System.Text.RegularExpressions;
 
 using Discord;
 using Discord.Commands;
+using System.Linq.Expressions;
 
 namespace MusicBot
 {
@@ -164,21 +165,12 @@ namespace MusicBot
 					{
 						FilePath = file,
 						Name = info.Item1,
-						Duration = TimeSpan.Parse(info.Item2)
+						Duration = GetDuration(info.Item2)
 					});
 					return;
 				}
 
-				string[] splits = info.Item2.Split(':');
-				string formattedDur = (splits.GetLength(0) > 2) ?
-										$"{splits[0]}:{splits[1]}:{splits[2]}"
-										:
-										(splits.GetLength(0) > 1) ?
-										$"00:{splits[0]}:{splits[1]}"
-										:
-										$"00:00:{splits[0]}";
-
-				if (TimeSpan.Parse(formattedDur).TotalHours > 0.8)
+				if (GetDuration(info.Item2).TotalHours > 0.8)
 				{
 					userMessage?.Channel.SendMessageAsync("Woah there! That video's a little big 'innit?");
 					tcs.SetResult(new Song());
@@ -211,7 +203,7 @@ namespace MusicBot
 					{
 						FilePath = file,
 						Name = info.Item1,
-						Duration = TimeSpan.Parse(formattedDur)
+						Duration = GetDuration(info.Item2)
 					});
 				}
 				else
@@ -250,23 +242,14 @@ namespace MusicBot
 					{
 						FilePath = file,
 						Name = info.Item1,
-						Duration = TimeSpan.Parse(info.Item2)
+						Duration = GetDuration(info.Item2)
 					});
 					return;
 				}
 
-				string[] splits = info.Item2.Split(':');
-				string formattedDur = (splits.GetLength(0) > 2) ?
-										$"{splits[0]}:{splits[1]}:{splits[2]}"
-										:
-										(splits.GetLength(0) > 1) ?
-										$"00:{splits[0]}:{splits[1]}"
-										:
-										$"00:00:{splits[0]}";
-
-				if (TimeSpan.Parse(formattedDur).TotalHours > 0.8)
+				if (GetDuration(info.Item2).TotalHours > 0.8)
 				{
-					userMessage?.Channel.SendMessageAsync("Woah there! That video's a little big 'innit?");
+					userMessage?.Channel.SendMessageAsync("Woah there! That song's a little long 'innit?");
 					tcs.SetResult(new Song());
 					return;
 				}
@@ -297,7 +280,7 @@ namespace MusicBot
 					{
 						FilePath = file,
 						Name = info.Item1,
-						Duration = TimeSpan.Parse(formattedDur)
+						Duration = GetDuration(info.Item2)
 					});
 				}
 				else
@@ -313,6 +296,24 @@ namespace MusicBot
 				throw new Exception("youtube-dl.exe failed to download!");
 
 			return result;
+		}
+
+		private static TimeSpan GetDuration(string time)
+		{
+			int length = time.Count(c => c == ':');
+			string format = length switch
+			{
+				0 => @"ss",
+				1 => @"mm\:ss",
+				2 => @"hh\:mm\:ss",
+				_ => throw new ArgumentOutOfRangeException(),
+			};
+
+			TimeSpan timeSpan;
+			if (TimeSpan.TryParseExact(time, format, null, out timeSpan))
+				return timeSpan;
+
+			return TimeSpan.FromSeconds(0);
 		}
 
 		private static void CalculateProgressBucket(Process proc, ref ConcurrentQueue<string> bucket, ref DateTimeOffset lastTick, DataReceivedEventArgs e)
@@ -423,7 +424,7 @@ namespace System
 		/// <exception cref="ArgumentNullException">
 		/// One or all of the passed arguments are null.
 		/// </exception>
-		public static string Substring(this String src, string start, string end)
+		public static string Substring(this string src, string start, string end)
 		{
 			if (src == null || start == null || end == null)
 				throw new ArgumentNullException();

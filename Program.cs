@@ -218,8 +218,8 @@ namespace MusicBot
 			{
 				string result = String.Empty;
 				result += $"Channel: \"{ChannelName}\"" + "\n\r";
-				result += $"Maximum requests: {MaxRequests.ToString()}" + "\n\r";
-				result += $"Maximum stored files: {MaxFiles.ToString()}" + "\n\r";
+				result += $"Maximum requests: {MaxRequests}" + "\n\r";
+				result += $"Maximum stored files: {MaxFiles}" + "\n\r";
 				result += $"Bot token: {Token}" + "\n\r";
 				result += $"Prefer FFMPeg: {PreferFFMpeg}" + "\n\r";
 				return result;

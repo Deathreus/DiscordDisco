@@ -86,7 +86,7 @@ namespace MusicBot.Services
 			{
 				using (var reader = new MediaFoundationReader(song.FilePath))
 				using (var mediaStream = new WaveChannel32(reader, .6f, 0f))
-				using (var resampler = new MediaFoundationResampler(mediaStream, OutFormat)) // Create a Disposable Resampler, which will convert the read MP3 data to PCM, using our Output Format
+				using (var resampler = new MediaFoundationResampler(mediaStream, OutFormat))
 				using (var outStream = client.CreatePCMStream(AudioApplication.Music))
 				{
 					resampler.ResamplerQuality = 60; // Set the quality of the resampler to 60, the highest quality
@@ -188,10 +188,10 @@ namespace MusicBot.Services
 						{
 							Exit = true;
 						}
-						/*catch
+						catch
 						{
-							failed = true;
-						}*/
+							Failed = true;
+						}
 					}
 
 					await outStream.FlushAsync();
