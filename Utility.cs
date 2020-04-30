@@ -472,6 +472,25 @@ namespace System
 			return src?.Split(separr, options);
 		}
 
+		public static string Escape(this string src)
+		{
+			string result = string.Empty;
+			for(int i=0; i<src.Length; ++i)
+			{
+				result = src[i] switch
+				{
+					/*'"' => src.Insert(i, @"\"),
+					'%' => src.Insert(i, @"%"),
+					'\\' => src.Insert(i, @"\")*/
+					'"' => src.Replace("\"", ""),
+					'\\' => src.Replace("\\", ""),
+					_ => result
+				};
+			}
+
+			return result;
+		}
+
 		public static UInt32 QuickHash(this string src)
 		{
 			UInt32 hash = 0;

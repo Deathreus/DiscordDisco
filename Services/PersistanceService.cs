@@ -69,7 +69,7 @@ namespace MusicBot.Services
 
 		~PersistanceService() => WorkerThread.Abort();
 
-		public async Task<string> Download(string url, bool bEnque, SocketCommandContext context)
+		public async Task<Song> Download(string url, bool bEnque, SocketCommandContext context)
 		{
 			string temp = Regex.Replace(url.Split(':')[1], "[^\\w]", "");
 			temp = String.Format("DEAD{0:X}", temp.QuickHash());
@@ -87,7 +87,7 @@ namespace MusicBot.Services
 			if (Files.Count > Program.MaxFiles)
 				PopOldest();
 
-			return fileName;
+			return song;
 		}
 
 		private void PopOldest()

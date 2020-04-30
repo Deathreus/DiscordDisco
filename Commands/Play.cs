@@ -44,8 +44,8 @@ namespace MusicBot.Commands
 				return;
 			}
 
-			string file = await Program.Instance.Downloader.Download(url, true, Context);
-			if (String.IsNullOrEmpty(file) || !File.Exists(file))
+			Song song = await Program.Instance.Downloader.Download(url, true, Context);
+			if (String.IsNullOrEmpty(song.FilePath) || !File.Exists(song.FilePath))
 			{
 				await ReplyAsync($"{Context.Message.Author.Mention}: Something went wrong, try again later.");
 				return;
