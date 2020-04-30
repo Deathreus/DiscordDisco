@@ -36,11 +36,21 @@ namespace MusicBot.Services
 
 		public async Task SendAudio(Song song, IAudioClient client)
 		{
-			Failed = Skip = Exit = false;
-			if (Program.PreferFFMpeg)
-				await SendAudioOverFFMpeg(song, client).ConfigureAwait(true);
-			else
-				await SendAudioOverNAudio(song, client).ConfigureAwait(true);
+			Failed = false;
+			Skip = false;
+			Exit = false;
+
+			try
+			{
+				if (Program.PreferFFMpeg)
+					await SendAudioOverFFMpeg(song, client).ConfigureAwait(false);
+				else
+					await SendAudioOverNAudio(song, client).ConfigureAwait(false);
+			}
+			catch (Exception ex)
+			{
+				await Program.Instance.Logger.LogDiscord(new LogMessage(LogSeverity.Critical, "Audio", ex.Message)); // Prints any errors to console
+			}
 		}
 
 		public bool IsPlaying(Song song) => (DateTime.Now - StartTime).CompareTo(song.Duration) <= 0;
@@ -128,17 +138,13 @@ namespace MusicBot.Services
 						catch
 						{
 							Failed = true;
+							throw;
 						}
 					}
 
 					await outStream.FlushAsync();
 
 					await _client.SetGameAsync("?play <url>", "http://twitch.tv/0", ActivityType.Streaming);
-
-					Exit = true;
-
-					if (Failed)
-						throw new Exception("Bad stream data encountered, possibly incomplete or corrupt file.");
 				}
 			}
 			catch (Exception ex)
@@ -191,17 +197,13 @@ namespace MusicBot.Services
 						catch
 						{
 							Failed = true;
+							throw;
 						}
 					}
 
 					await outStream.FlushAsync();
 
 					await _client.SetGameAsync("?play <url>", "http://twitch.tv/0", ActivityType.Streaming);
-
-					Exit = true;
-
-					if (Failed)
-						throw new Exception("Bad stream data encountered, possibly incomplete or corrupt file.");
 				}
 			}
 			catch (Exception ex)
