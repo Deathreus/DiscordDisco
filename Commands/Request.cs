@@ -92,7 +92,8 @@ namespace MusicBot.Commands
 				{
 					FileName = $".\\bin\\ffmpeg",
 					Arguments = $"-hide_banner -y -i \"{directory}\\{fileName}\" {metaArguments} -b:a 196k \"{directory}\\{newName}\"",
-					WindowStyle = ProcessWindowStyle.Hidden
+					CreateNoWindow = true,
+					UseShellExecute = false
 				}
 			};
 
