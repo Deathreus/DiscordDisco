@@ -403,7 +403,7 @@ namespace MusicBot
 			}
 		}
 
-		private const string arguments = "--extract-audio --audio-format vorbis --audio-quality 128 --no-cache-dir --prefer-ffmpeg --limit-rate 1.2M";
+		private const string arguments = "--extract-audio --audio-format vorbis --audio-quality 160 --no-cache-dir --prefer-ffmpeg --limit-rate 1.2M";
 	}
 
 	public abstract class SocketModuleBase : ModuleBase<SocketCommandContext> {}
