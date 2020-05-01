@@ -15,7 +15,7 @@ namespace MusicBot.Services
 					{
 						if (Program.Queues.IsEmpty)
 						{
-							Thread.Sleep(250);
+							Thread.Sleep(500);
 							continue;
 						}
 
@@ -34,10 +34,14 @@ namespace MusicBot.Services
 								Task.Run(async () => {
 									await Program.Instance.Audio.SendAudio(song, client);
 								});
+								Thread.Sleep(5);
 							}
+
+							while (!Program.Instance.Audio.Stopped)
+								Thread.Sleep(100);
 						}
 
-						Thread.Sleep(333);
+						Thread.Sleep(500);
 					}
 				})
 				{
