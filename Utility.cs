@@ -10,6 +10,7 @@ using System.Text.RegularExpressions;
 using Discord;
 using Discord.Commands;
 using System.Linq.Expressions;
+using System.Text;
 
 namespace MusicBot
 {
@@ -148,9 +149,6 @@ namespace MusicBot
 		{
 			var tcs = new TaskCompletionSource<Song>();
 
-			string original = file.Remove(file.LastIndexOf('.'), 4);
-			original = string.Concat(original, ".ogg");
-
 			var ProgressBucket = new ConcurrentQueue<string>();
 
 			new Thread(() => {
@@ -196,7 +194,7 @@ namespace MusicBot
 				while (!youtubedl.HasExited)
 					Thread.Sleep(100);
 
-				if (File.Exists(original))
+				if (File.Exists(file))
 				{
 					//Return MP3 Path & Video Title
 					tcs.SetResult(new Song
@@ -224,9 +222,6 @@ namespace MusicBot
 		private static async Task<Song> DownloadFromSoundCloud(string url, string file, IUserMessage userMessage)
 		{
 			var tcs = new TaskCompletionSource<Song>();
-
-			string original = file.Remove(file.LastIndexOf('.'), 4);
-			original = string.Concat(original, ".ogg");
 
 			var ProgressBucket = new ConcurrentQueue<string>();
 
@@ -273,7 +268,7 @@ namespace MusicBot
 				while (!youtubedl.HasExited)
 					Thread.Sleep(100);
 
-				if (File.Exists(original))
+				if (File.Exists(file))
 				{
 					//Return MP3 Path & Video Title
 					tcs.SetResult(new Song
@@ -479,16 +474,24 @@ namespace System
 			{
 				result = src[i] switch
 				{
-					/*'"' => src.Insert(i, @"\"),
+					'"' => src.Insert(i, @"\"),
 					'%' => src.Insert(i, @"%"),
-					'\\' => src.Insert(i, @"\")*/
-					'"' => src.Replace("\"", ""),
-					'\\' => src.Replace("\\", ""),
+					'\\' => src.Insert(i, @"\"),
+					// for whatever reason, parenthesis breaks ffmpeg's -metadata
+					'(' => src.Remove(i, 1).Insert(i, "["),
+					')' => src.Remove(i, 1).Insert(i, "]"),
 					_ => result
 				};
 			}
 
 			return result;
+		}
+
+		public static string Encode(this string src, Encoding encoding)
+		{
+			Encoding encoder = Encoding.GetEncoding(encoding.EncodingName, new EncoderReplacementFallback(string.Empty), new DecoderExceptionFallback());
+			byte[] bytes = Encoding.Convert(Encoding.Unicode, encoder, Encoding.Unicode.GetBytes(src));
+			return encoding.GetString(bytes);
 		}
 
 		public static UInt32 QuickHash(this string src)

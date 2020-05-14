@@ -47,7 +47,6 @@ namespace MusicBot.Commands
 					RetryMode = RetryMode.AlwaysRetry
 				});
 				
-				await Context.Message.AddReactionAsync(new Emoji("🎶"));
 				await Context.Message.AddReactionAsync(Emote.Parse("<:check:463136032297189407>"));
 				
 				return;
@@ -73,12 +72,7 @@ namespace MusicBot.Commands
 			string fileName = Path.GetFileName(song.FilePath);
 
 			string newName = string.Format("{0}.mp3", song.Name).Trim();
-
-			Encoding encoder = Encoding.GetEncoding(Encoding.ASCII.EncodingName,
-													new EncoderReplacementFallback(string.Empty),
-													new DecoderExceptionFallback());
-			byte[] bytes = Encoding.Convert(Encoding.UTF8, encoder, Encoding.UTF8.GetBytes(newName));
-			newName = Encoding.ASCII.GetString(bytes);
+			newName = newName.Encode(Encoding.ASCII);
 			
 			foreach (char invalidChar in Path.GetInvalidPathChars())
 			{
@@ -92,8 +86,12 @@ namespace MusicBot.Commands
 				{
 					FileName = $".\\bin\\ffmpeg",
 					Arguments = $"-hide_banner -y -i \"{directory}\\{fileName}\" {metaArguments} -b:a 196k \"{directory}\\{newName}\"",
+				#if !DEBUG
 					CreateNoWindow = true,
 					UseShellExecute = false
+				#else
+					UseShellExecute = true
+				#endif
 				}
 			};
 
