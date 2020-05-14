@@ -53,7 +53,6 @@ namespace MusicBot.Commands
 
 			await ReplyAsync($"{Context.Message.Author.Mention}: Added to queue, wait patiently or vote to skip current song.");
 			
-			await Context.Message.AddReactionAsync(new Emoji("🎶"));
 			await Context.Message.AddReactionAsync(Emote.Parse("<:check:463136032297189407>"));
 		}
 	}

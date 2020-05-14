@@ -87,6 +87,7 @@ namespace MusicBot
 				Arguments = args,
 				CreateNoWindow = true,
 				RedirectStandardOutput = true,
+				RedirectStandardError = true,
 				UseShellExecute = false
 			});
 		}
@@ -168,7 +169,7 @@ namespace MusicBot
 					return;
 				}
 
-				if (GetDuration(info.Item2).TotalHours > 0.8)
+				if (GetDuration(info.Item2).TotalHours > 0.65)
 				{
 					userMessage?.Channel.SendMessageAsync("Woah there! That video's a little big 'innit?");
 					tcs.SetResult(new Song());
@@ -177,18 +178,19 @@ namespace MusicBot
 
 				Started = Finished = false;
 				//Download Video
-				var youtubedl = CreateDLProcess($"{arguments} -o \"{original}\" {url}");
+				var youtubedl = CreateDLProcess($"{arguments} -o \"{file}\" {url}");
 
 				DateTimeOffset lastTick = DateTime.Now;
 				youtubedl.OutputDataReceived += (s, e) =>
 				{
-					CollectErrorsOutput(youtubedl, e);
-					CalculateProgressBucket(youtubedl, ref ProgressBucket, ref lastTick, e);
-					TryPerformProgressUpdate(ref ProgressBucket, userMessage);
+					CalculateProgressBucket(youtubedl, ProgressBucket, lastTick, e);
+					TryPerformProgressUpdate(ProgressBucket, userMessage);
 				};
+				youtubedl.ErrorDataReceived += (s, e) => CollectErrorsOutput(youtubedl, e);
 
 				youtubedl.Start();
 				youtubedl.BeginOutputReadLine();
+				youtubedl.BeginErrorReadLine();
 
 				//Wait until download is finished
 				while (!youtubedl.HasExited)
@@ -242,7 +244,7 @@ namespace MusicBot
 					return;
 				}
 
-				if (GetDuration(info.Item2).TotalHours > 0.8)
+				if (GetDuration(info.Item2).TotalHours > 0.65)
 				{
 					userMessage?.Channel.SendMessageAsync("Woah there! That song's a little long 'innit?");
 					tcs.SetResult(new Song());
@@ -256,13 +258,14 @@ namespace MusicBot
 				DateTimeOffset lastTick = DateTime.Now;
 				youtubedl.OutputDataReceived += (s, e) =>
 				{
-					CollectErrorsOutput(youtubedl, e);
-					CalculateProgressBucket(youtubedl, ref ProgressBucket, ref lastTick, e);
-					TryPerformProgressUpdate(ref ProgressBucket, userMessage);
+					CalculateProgressBucket(youtubedl, ProgressBucket, lastTick, e);
+					TryPerformProgressUpdate(ProgressBucket, userMessage);
 				};
+				youtubedl.ErrorDataReceived += (s, e) => CollectErrorsOutput(youtubedl, e);
 
 				youtubedl.Start();
 				youtubedl.BeginOutputReadLine();
+				youtubedl.BeginErrorReadLine();
 
 				//Wait until download is finished
 				while (!youtubedl.HasExited)
@@ -311,7 +314,7 @@ namespace MusicBot
 			return TimeSpan.FromSeconds(0);
 		}
 
-		private static void CalculateProgressBucket(Process proc, ref ConcurrentQueue<string> bucket, ref DateTimeOffset lastTick, DataReceivedEventArgs e)
+		private static void CalculateProgressBucket(Process proc, ConcurrentQueue<string> bucket, DateTimeOffset lastTick, DataReceivedEventArgs e)
 		{
 			if (string.IsNullOrEmpty(e.Data) || proc.HasExited)
 			{
@@ -366,7 +369,7 @@ namespace MusicBot
 			}
 		}
 
-		private static void TryPerformProgressUpdate(ref ConcurrentQueue<string> bucket, IUserMessage userMessage)
+		private static void TryPerformProgressUpdate(ConcurrentQueue<string> bucket, IUserMessage userMessage)
 		{
 			if (bucket.TryDequeue(out var status))
 			{
