@@ -112,7 +112,7 @@ namespace MusicBot.Services
 					{
 						try
 						{
-							if (resampler.Read(buffer, 0, blockSize) == 0/* || !mediaStream.HasData(blockSize)*/)
+							if (resampler.Read(buffer, 0, blockSize) == 0)
 							{
 								Exit = true;
 								continue;

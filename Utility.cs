@@ -97,7 +97,7 @@ namespace MusicBot
 		/// </summary>
 		/// <param name="url">URL to the YouTube Video</param>
 		/// <returns>The YouTube Video title and duration</returns>
-		private static async Task<Tuple<string, string>> GetInfo(string url)
+		public static async Task<Tuple<string, string>> GetInfo(string url)
 		{
 			var tcs = new TaskCompletionSource<Tuple<string, string>>();
 
@@ -296,7 +296,7 @@ namespace MusicBot
 			return result;
 		}
 
-		private static TimeSpan GetDuration(string time)
+		public static TimeSpan GetDuration(string time)
 		{
 			int length = time.Count(c => c == ':');
 			string format = length switch
@@ -401,7 +401,7 @@ namespace MusicBot
 			}
 		}
 
-		private const string arguments = "--extract-audio --audio-format vorbis --audio-quality 160 --no-cache-dir --prefer-ffmpeg --limit-rate 1.2M";
+		private const string arguments = "--extract-audio --audio-format vorbis --audio-quality 160 --no-cache-dir --prefer-ffmpeg --limit-rate 4M";
 	}
 
 	public abstract class SocketModuleBase : ModuleBase<SocketCommandContext> {}
