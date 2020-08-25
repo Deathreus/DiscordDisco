@@ -44,12 +44,14 @@ namespace MusicBot.Commands
 				return;
 			}
 
-			Song song = await Program.Instance.Downloader.Download(url, true, Context);
-			if (String.IsNullOrEmpty(song.FilePath) || !File.Exists(song.FilePath))
+			Tuple<string, string> info = await Utils.GetInfo(url);
+			Song song = new Song
 			{
-				await ReplyAsync($"{Context.Message.Author.Mention}: Something went wrong, try again later.");
-				return;
-			}
+				Name = info.Item1,
+				Duration = Utils.GetDuration(info.Item2),
+				URL = url
+			};
+			Program.Queues[Context.Guild.Id].Enqueue(song);
 
 			await ReplyAsync($"{Context.Message.Author.Mention}: Added to queue, wait patiently or vote to skip current song.");
 			

@@ -7,5 +7,6 @@ namespace MusicBot
 		public string Name { get; set; }
 		public string FilePath { get; set; }
 		public TimeSpan Duration { get; set; }
+		public string URL { get; set; }
 	}
 }

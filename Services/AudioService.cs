@@ -4,12 +4,17 @@ using System.Threading;
 using System.Threading.Tasks;
 using System.Diagnostics;
 using System.Net;
+using System.Linq;
 
 using NAudio.Wave;
 
 using Discord;
 using Discord.WebSocket;
 using Discord.Audio;
+
+using YoutubeExplode;
+using YoutubeExplode.Videos;
+using YoutubeExplode.Videos.Streams;
 
 namespace MusicBot.Services
 {
@@ -21,6 +26,7 @@ namespace MusicBot.Services
 			_tcs = new TaskCompletionSource<bool>();
 			_disposeToken = new CancellationTokenSource();
 			WebClient = new WebClient();
+			YouTube = new YoutubeClient();
 			OutFormat = WaveFormat.CreateCustomFormat(WaveFormatEncoding.Pcm, 48000, 2, 192000, 4, 16);
 			Failed = Skip = Exit = false;
 		}
@@ -86,65 +92,78 @@ namespace MusicBot.Services
 
 		public WaveFormat OutFormat { get; }
 
+		public YoutubeClient YouTube { get; private set; }
+
 		private bool Failed { get; set; }
 
 		private DateTime StartTime { get; set; }
 
-		async Task SendAudioOverNAudio(Song song, IAudioClient client)
+		private async Task SendAudioOverNAudio(Song song, IAudioClient client)
 		{
 			try
 			{
-				using (var reader = new MediaFoundationReader(song.FilePath))
-				using (var mediaStream = new WaveChannel32(reader, .6f, 0f))
-				using (var resampler = new MediaFoundationResampler(mediaStream, OutFormat))
-				using (var outStream = client.CreatePCMStream(AudioApplication.Music))
+				StreamManifest manifest = await YouTube.Videos.Streams.GetManifestAsync(new VideoId(song.URL));
+				IStreamInfo streamInfo = manifest.GetAudioOnly().Where(a => a.Container.Name == "webm").WithHighestBitrate();
+				if (streamInfo == null)
+					throw new NullReferenceException();
+
+				using (var stream = new MemoryStream())
 				{
-					resampler.ResamplerQuality = 60; // Set the quality of the resampler to 60, the highest quality
-					mediaStream.PadWithZeroes = false; // Stop when we hit the end of the file
-					int blockSize = OutFormat.AverageBytesPerSecond / 60; // Establish the size of our audio buffer
-					byte[] buffer = new byte[blockSize];
+					await CreateWebStream(streamInfo).CopyToAsync(stream);
 
-					StartTime = DateTime.Now;
-
-					await _client.SetGameAsync(song.Name, "http://twitch.tv/0", ActivityType.Streaming);
-
-					while (!Skip && !Exit && !Failed && !_disposeToken.IsCancellationRequested) // Read audio into our buffer, and keep a loop open while data is present
+					using (var reader = new RawSourceWaveStream(stream, OutFormat))
+					using (var mediaStream = new WaveChannel32(reader, .6f, 0f))
+					using (var resampler = new MediaFoundationResampler(mediaStream, OutFormat))
+					using (var outStream = client.CreatePCMStream(AudioApplication.Music))
 					{
-						try
+						reader.Position = 0;
+						resampler.ResamplerQuality = 60; // Set the quality of the resampler to 60, the highest quality
+						mediaStream.PadWithZeroes = false; // Stop when we hit the end of the file
+						int blockSize = OutFormat.AverageBytesPerSecond / 60; // Establish the size of our audio buffer
+						byte[] buffer = new byte[blockSize];
+
+						StartTime = DateTime.Now;
+
+						await _client.SetGameAsync(song.Name, "http://twitch.tv/0", ActivityType.Streaming);
+
+						while (!Skip && !Exit && !Failed && !_disposeToken.IsCancellationRequested) // Read audio into our buffer, and keep a loop open while data is present
 						{
-							if (resampler.Read(buffer, 0, blockSize) == 0)
+							try
+							{
+								if (resampler.Read(buffer, 0, blockSize) == 0)
+								{
+									Exit = true;
+									continue;
+								}
+
+								await outStream.WriteAsync(buffer, 0, blockSize, _disposeToken.Token);
+
+								if (Pause)
+								{
+									bool pauseAgain;
+
+									do
+									{
+										pauseAgain = await _tcs.Task;
+										_tcs = new TaskCompletionSource<bool>();
+									} while (pauseAgain);
+								}
+							}
+							catch (TaskCanceledException)
 							{
 								Exit = true;
-								continue;
 							}
-
-							await outStream.WriteAsync(buffer, 0, blockSize, _disposeToken.Token);
-
-							if (Pause)
+							catch
 							{
-								bool pauseAgain;
-
-								do
-								{
-									pauseAgain = await _tcs.Task;
-									_tcs = new TaskCompletionSource<bool>();
-								} while (pauseAgain);
+								Failed = true;
+								throw;
 							}
 						}
-						catch (TaskCanceledException)
-						{
-							Exit = true;
-						}
-						catch
-						{
-							Failed = true;
-							throw;
-						}
+
+						await outStream.FlushAsync();
+
+						await _client.SetGameAsync("?play <url>", "http://twitch.tv/0", ActivityType.Streaming);
 					}
-
-					await outStream.FlushAsync();
-
-					await _client.SetGameAsync("?play <url>", "http://twitch.tv/0", ActivityType.Streaming);
 				}
 			}
 			catch (Exception ex)
@@ -153,11 +172,16 @@ namespace MusicBot.Services
 			}
 		}
 
-		async Task SendAudioOverFFMpeg(Song song, IAudioClient client)
+		private async Task SendAudioOverFFMpeg(Song song, IAudioClient client)
 		{
 			try
 			{
-				using (var mediaStream = CreateStream(song.FilePath).StandardOutput.BaseStream)
+				StreamManifest manifest = await YouTube.Videos.Streams.GetManifestAsync(new VideoId(song.URL));
+				IStreamInfo streamInfo = manifest.GetAudioOnly().Where(a => a.Container.Name == "webm").WithHighestBitrate();
+				if (streamInfo == null)
+					throw new NullReferenceException();
+
+				using (var mediaStream = CreateWebStream(streamInfo))
 				using (var outStream = client.CreatePCMStream(AudioApplication.Music))
 				{
 					int blockSize = OutFormat.AverageBytesPerSecond / 60; // Establish the size of our audio buffer
@@ -212,15 +236,17 @@ namespace MusicBot.Services
 			}
 		}
 
-		private static Process CreateStream(string path)
+		private static Stream CreateWebStream(IStreamInfo streamInfo)
 		{
-			return Process.Start(new ProcessStartInfo
+			Process proc = Process.Start(new ProcessStartInfo
 			{
 				FileName = ".\\bin\\ffmpeg",
-				Arguments = $"-hide_banner -loglevel panic -i \"{path}\" -ac 2 -f s16le -ar 48000 -vol 154 pipe:1",
+				Arguments = $"-hide_banner -loglevel panic -i \"{streamInfo.Url}\" -ac 2 -f s16le -ar 48000 pipe:1",
 				UseShellExecute = false,
 				RedirectStandardOutput = true
 			});
+
+			return proc.StandardOutput.BaseStream;
 		}
 
 		private TaskCompletionSource<bool> _tcs;
