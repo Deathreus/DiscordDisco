@@ -170,6 +170,10 @@ namespace MusicBot.Services
 			{
 				await Program.Instance.Logger.LogDiscord(new LogMessage(LogSeverity.Critical, "Audio", ex.Message)); // Prints any errors to console
 			}
+			finally
+			{
+				GC.Collect();
+			}
 		}
 
 		private async Task SendAudioOverFFMpeg(Song song, IAudioClient client)
@@ -233,6 +237,10 @@ namespace MusicBot.Services
 			catch (Exception ex)
 			{
 				await Program.Instance.Logger.LogDiscord(new LogMessage(LogSeverity.Critical, "Audio", ex.Message)); // Prints any errors to console
+			}
+			finally
+			{
+				GC.Collect();
 			}
 		}
 

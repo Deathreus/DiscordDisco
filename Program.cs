@@ -153,7 +153,7 @@ namespace MusicBot
 					catch
 					{
 						await Logger.LogDiscord(new LogMessage(LogSeverity.Error, "Keep Alive", "Bot is in multiple Guilds..."));
-						break;
+						throw;
 					}
 				}
 			}).ConfigureAwait(false);
