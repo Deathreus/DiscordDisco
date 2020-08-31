@@ -19,27 +19,21 @@ namespace MusicBot.Commands
 				Timestamp = DateTime.UtcNow
 			};
 
-			if (Program.Queues.TryGetValue(Context.Guild.Id, out var queue))
+			if (!Program.Queue.IsEmpty)
 			{
-				if (!queue.IsEmpty)
+				int i = 1;
+				using (var _enum = Program.Queue.GetEnumerator())
 				{
-					int i = 1;
-					using (var _enum = queue.GetEnumerator())
+					while (_enum.MoveNext())
 					{
-						while (_enum.MoveNext())
-						{
-							Song song = _enum.Current;
-							embed.AddField($"{i}", $"{song.Name}\n{song.Duration}", true);
-							i++;
-						}
+						Song song = _enum.Current;
+						embed.AddField($"{i}", $"{song.Name}\n{song.Duration}", true);
+						i++;
 					}
 				}
-
-				await ReplyAsync("", false, embed.Build());
-				return;
 			}
 
-			await ReplyAsync("Something went wrong, contact my agent.");
+			await ReplyAsync("", false, embed.Build());
 		}
 	}
 }

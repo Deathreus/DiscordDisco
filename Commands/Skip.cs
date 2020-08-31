@@ -18,19 +18,11 @@ namespace MusicBot.Commands
 				return;
 			}
 
-			ulong ID = Context.Guild.Id;
-
-			if (!SkipVotes.Keys.Contains(ID))
-				SkipVotes.Add(ID, 0);
-
-			if (!GuildVotes.Keys.Contains(ID))
-				GuildVotes.Add(ID, new List<ulong>());
-
-			var list = GuildVotes.Where(kv => kv.Key.Equals(ID)).Single().Value;
-			if(!list.Contains(Context.Message.Author.Id))
+			ulong ID = Context.Message.Author.Id;
+			if(!GuildVotes.Contains(ID))
 			{
-				SkipVotes[ID] = SkipVotes[ID] + 1;
-				list.Add(Context.Message.Author.Id);
+				SkipVotes += 1;
+				GuildVotes.Add(ID);
 			}
 			else
 			{
@@ -41,29 +33,23 @@ namespace MusicBot.Commands
 
 			int ratio = (Context.Guild.VoiceChannels.First(c => c.Name.Equals(Program.Channel)).Users.Count / 4) + 1;
 
-			if (SkipVotes[ID] >= ratio)
+			if (SkipVotes >= ratio)
 			{
-				SkipVotes[ID] = 0;
-				GuildVotes[ID].Clear();
+				SkipVotes = 0;
+				GuildVotes.Clear();
 				Program.Instance.Audio.Skip = true;
 				await ReplyAsync("People agreed the current song is trash, skipping...");
 			}
 		}
 
-		public static void Reset(ulong ID)
+		public static void Reset()
 		{
-			if (!SkipVotes.Keys.Contains(ID))
-				SkipVotes.Add(ID, 0);
-
-			if (!GuildVotes.Keys.Contains(ID))
-				GuildVotes.Add(ID, new List<ulong>());
-
-			SkipVotes[ID] = 0;
-			GuildVotes[ID].Clear();
+			SkipVotes = 0;
+			GuildVotes.Clear();
 		}
 
-		private static Dictionary<ulong, int> SkipVotes = new Dictionary<ulong, int>();
+		private static int SkipVotes = 0;
 
-		private static Dictionary<ulong, List<ulong>> GuildVotes = new Dictionary<ulong, List<ulong>>();
+		private static List<ulong> GuildVotes = new List<ulong>();
 	}
 }

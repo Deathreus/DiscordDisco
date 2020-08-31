@@ -1,6 +1,5 @@
 # DiscordDisco
-A simple bot that has been untested from running in multiple guilds but was made to support it
-that streams music on request or DM's a file to you.
+A simple bot that streams music on request or DM's a file to you.
 
 ## Commands
 Command prefix is `?` or mentioning the bot

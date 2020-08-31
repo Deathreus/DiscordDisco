@@ -32,13 +32,7 @@ namespace MusicBot.Commands
 				}
 			}
 
-			if (!Program.Queues.TryGetValue(Context.Guild.Id, out var queue) || queue == null)
-			{
-				await ReplyAsync($"{Context.Message.Author.Mention}: Something went horribly wrong, contact my agent.");
-				return;
-			}
-
-			if(queue.Count >= Program.MaxRequests)
+			if(Program.Queue.Count >= Program.MaxRequests)
 			{
 				await ReplyAsync($"{Context.Message.Author.Mention}: Queue is full, try again later.");
 				return;
@@ -51,7 +45,7 @@ namespace MusicBot.Commands
 				Duration = Utils.GetDuration(info.Item2),
 				URL = url
 			};
-			Program.Queues[Context.Guild.Id].Enqueue(song);
+			Program.Queue.Enqueue(song);
 
 			await ReplyAsync($"{Context.Message.Author.Mention}: Added to queue, wait patiently or vote to skip current song.");
 			

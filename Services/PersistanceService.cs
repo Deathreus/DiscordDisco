@@ -81,7 +81,7 @@ namespace MusicBot.Services
 			var message = !File.Exists(fileName) ? await context.Channel.SendMessageAsync("Downloading...\n") : null;
 			Song song = await Utils.Download(url, fileName, message);
 			if (song != null && bEnque)
-				Program.Queues[context.Guild.Id].Enqueue(song);
+				Program.Queue.Enqueue(song);
 
 			// In case we get a ton of requests, arbitrarily limit how many we store
 			if (Files.Count > Program.MaxFiles)

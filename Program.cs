@@ -29,8 +29,8 @@ namespace MusicBot
 		public static string Channel { get { return Config.ChannelName; } }
 		public static bool PreferFFMpeg { get { return Config.PreferFFMpeg; } }
 
-		public static ConcurrentDictionary<ulong, IAudioClient> Connections { get; } = new ConcurrentDictionary<ulong, IAudioClient>();
-		public static ConcurrentDictionary<ulong, ConcurrentQueue<Song>> Queues { get; } = new ConcurrentDictionary<ulong, ConcurrentQueue<Song>>();
+		public static IAudioClient Connection { get; private set; } = null;
+		public static ConcurrentQueue<Song> Queue { get; } = new ConcurrentQueue<Song>();
 
 		public static Program Instance { get; private set; }
 
@@ -91,18 +91,15 @@ namespace MusicBot
 
 		private static Task OnLoseGuild(SocketGuild guild)
 		{
-			if (Connections.TryRemove(guild.Id, out var client))
+			if (Connection != null)
 			{
-				client.StopAsync();
-				client.Dispose();
+				Connection.StopAsync();
+				Connection.Dispose();
 			}
 
-			if (Queues.TryRemove(guild.Id, out var queue))
-			{
-				do {
-					queue.TryDequeue(out var _);
-				} while (!queue.IsEmpty);
-			}
+			do {
+				Queue.TryDequeue(out var _);
+			} while (!Queue.IsEmpty);
 
 			return Task.CompletedTask;
 		}
@@ -110,14 +107,11 @@ namespace MusicBot
 		private static Task OnGuildAvailable(SocketGuild guild)
 		{
 			string name = Config.ChannelName;
-			IVoiceChannel channel = guild.VoiceChannels.Where(c => c.Name.Equals(name, StringComparison.InvariantCultureIgnoreCase)).SingleOrDefault();
+			IVoiceChannel channel = guild.VoiceChannels.Where(c => c.Name.Equals(name, StringComparison.InvariantCultureIgnoreCase)).First();
 			if (channel != null)
 			{
-				Task.Run(async () =>
-				{
-					IAudioClient client = await channel.ConnectAsync();
-					Connections.TryAdd(guild.Id, client);
-					Queues.TryAdd(guild.Id, new ConcurrentQueue<Song>());
+				Task.Run(async () => {
+					Connection = await channel.ConnectAsync();
 				});
 			}
 
@@ -144,16 +138,23 @@ namespace MusicBot
 			{
 				while (true)
 				{
-					foreach (var guild in _client.Guilds)
+					try
 					{
+						var guild = _client.Guilds.Single();
+
 						if (Instance.Audio.Stopped)
 						{
 							await OnLoseGuild(guild);
 							await OnGuildAvailable(guild);
 						}
-					}
 
-					await Task.Delay(TimeSpan.FromMinutes(10));
+						await Task.Delay(TimeSpan.FromMinutes(10));
+					}
+					catch
+					{
+						await Logger.LogDiscord(new LogMessage(LogSeverity.Error, "Keep Alive", "Bot is in multiple Guilds..."));
+						break;
+					}
 				}
 			}).ConfigureAwait(false);
 
