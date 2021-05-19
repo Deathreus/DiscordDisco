@@ -31,7 +31,7 @@ namespace MusicBot.Services
 						while (!Program.Instance.Audio.Stopped)
 							Thread.Sleep(100);
 
-						Thread.Sleep(500);
+						Thread.Sleep(1000);
 					}
 				})
 				{

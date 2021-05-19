@@ -103,7 +103,7 @@ namespace MusicBot.Services
 			try
 			{
 				StreamManifest manifest = await YouTube.Videos.Streams.GetManifestAsync(new VideoId(song.URL));
-				IStreamInfo streamInfo = manifest.GetAudioOnly().Where(a => a.Container.Name == "webm").WithHighestBitrate();
+				IStreamInfo streamInfo = manifest.GetAudioOnly().WithHighestBitrate();
 				if (streamInfo == null)
 					throw new NullReferenceException();
 
@@ -181,7 +181,7 @@ namespace MusicBot.Services
 			try
 			{
 				StreamManifest manifest = await YouTube.Videos.Streams.GetManifestAsync(new VideoId(song.URL));
-				IStreamInfo streamInfo = manifest.GetAudioOnly().Where(a => a.Container.Name == "webm").WithHighestBitrate();
+				IStreamInfo streamInfo = manifest.GetAudioOnly().WithHighestBitrate();
 				if (streamInfo == null)
 					throw new NullReferenceException();
 
